@@ -398,7 +398,7 @@ async def detect_objects(request: DetectionRequest):
         
         # Run inference
         inference_start = time.time()
-        detections = mock_object_detection(image_array, request.confidence_threshold)
+        detections = run_object_detection(image_array, request.confidence_threshold)
         inference_ts = time.time()
         
         response = DetectionResponse(
