@@ -593,11 +593,24 @@ const WebRTCDetectionApp = () => {
 
   const handleIceCandidate = async (message) => {
     try {
-      await peerConnectionRef.current?.addIceCandidate(
-        new RTCIceCandidate(message.data)
-      );
+      console.log('🧊 DEBUG: Handling ICE candidate from', message.sender_id);
+      console.log('🧊 DEBUG: ICE candidate data:', message.data);
+      
+      if (!peerConnectionRef.current) {
+        console.error('❌ No peer connection available when handling ICE candidate');
+        throw new Error('Peer connection not available for ICE candidate');
+      }
+
+      console.log('🧊 DEBUG: Peer connection state:', peerConnectionRef.current.connectionState);
+      console.log('🧊 DEBUG: Signaling state:', peerConnectionRef.current.signalingState);
+
+      const candidate = new RTCIceCandidate(message.data);
+      await peerConnectionRef.current.addIceCandidate(candidate);
+      console.log('🧊 DEBUG: ICE candidate added successfully');
     } catch (error) {
-      console.error('Error handling ICE candidate:', error);
+      console.error('❌ Error handling ICE candidate:', error);
+      console.error('❌ Error details:', error.message, error.stack);
+      setErrors(prev => [...prev, { timestamp: Date.now(), error: `Failed to handle ICE candidate: ${error.message}` }]);
     }
   };
 
