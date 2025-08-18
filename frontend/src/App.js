@@ -803,18 +803,18 @@ const WebRTCDetectionApp = () => {
   // Connect when room ID changes
   useEffect(() => {
     if (roomId) {
-      connectWebSocket(roomId);
+      connectSignaling(roomId);
       if (!peerConnectionRef.current) {
         peerConnectionRef.current = setupPeerConnection();
       }
     }
     
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
+      if (signalingRef.current) {
+        signalingRef.current.close();
       }
     };
-  }, [roomId, connectWebSocket]);
+  }, [roomId, connectSignaling]);
 
   const startSession = () => {
     if (!roomId) {
