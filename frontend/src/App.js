@@ -842,23 +842,87 @@ const WebRTCDetectionApp = () => {
     });
   };
 
+  // Create a mock video stream for testing environments
+  const createMockVideoStream = () => {
+    console.log('🎬 Creating mock video stream for testing environment');
+    
+    // Create a canvas element to generate mock video
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 480;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw a simple moving pattern
+    let frame = 0;
+    const animate = () => {
+      // Clear canvas
+      ctx.fillStyle = '#2563eb';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw moving circle
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      const x = (Math.sin(frame * 0.02) + 1) * (canvas.width / 2);
+      const y = (Math.cos(frame * 0.03) + 1) * (canvas.height / 2);
+      ctx.arc(x, y, 50, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      // Draw frame counter
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '24px Arial';
+      ctx.fillText(`Mock Video - Frame ${frame}`, 20, 40);
+      
+      frame++;
+      requestAnimationFrame(animate);
+    };
+    animate();
+    
+    // Create video stream from canvas
+    const stream = canvas.captureStream(30); // 30 FPS
+    console.log('🎬 Mock video stream created:', stream);
+    console.log('🎬 Mock stream tracks:', stream.getTracks());
+    
+    return stream;
+  };
+
   // Start local camera (for phone interface)
   const startLocalCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 }
-        },
-        audio: false
-      });
+      console.log('📱🎯 Starting camera access...');
+      
+      let stream;
+      try {
+        // First try to get real camera
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 }
+          },
+          audio: false
+        });
+        console.log('📱✅ Real camera access successful');
+      } catch (cameraError) {
+        console.warn('📱⚠️ Camera access failed:', cameraError.message);
+        console.log('📱🎬 Falling back to mock video stream for testing...');
+        
+        // Create mock video stream for testing
+        stream = createMockVideoStream();
+        
+        // Add user feedback about mock stream
+        setErrors(prev => [...prev, { 
+          timestamp: Date.now(), 
+          error: 'Using mock video stream - real camera not available in testing environment' 
+        }]);
+      }
 
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        console.log('📱 Local video element srcObject set');
       }
 
       localStreamRef.current = stream;
+      console.log('📱 Stream saved to ref');
 
       // Add stream to peer connection
       if (peerConnectionRef.current) {
@@ -911,8 +975,11 @@ const WebRTCDetectionApp = () => {
         console.error('📱❌ ERROR: No peer connection available when trying to add tracks');
       }
     } catch (error) {
-      console.error('Error accessing camera:', error);
-      setErrors(prev => [...prev, { timestamp: Date.now(), error: 'Failed to access camera' }]);
+      console.error('❌ Critical error in startLocalCamera:', error);
+      setErrors(prev => [...prev, { 
+        timestamp: Date.now(), 
+        error: `Critical camera error: ${error.message}` 
+      }]);
     }
   };
 
