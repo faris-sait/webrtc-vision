@@ -492,18 +492,18 @@ const WebRTCDetectionApp = () => {
   // Server detection processing function  
   const processServerDetection = async (frame) => {
     return new Promise((resolve) => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
+      if (signalingRef.current) {
         // Store resolve function to call when server responds
         const frameId = frame.id;
         window.pendingDetections = window.pendingDetections || {};
         window.pendingDetections[frameId] = resolve;
 
-        wsRef.current.send(JSON.stringify({
+        sendSignalingMessage({
           type: 'detection_frame',
           frame_id: frameId,
           frame_data: frame.data,
           capture_ts: frame.captureTimestamp
-        }));
+        });
 
         // Timeout after 5 seconds
         setTimeout(() => {
