@@ -377,7 +377,7 @@ class WebSocketSignalingTester:
             ws_url = f"{WS_LOCAL}/ws/{test_room_id}"
             
             # Test 1: Single connection tracking
-            async with websockets.connect(ws_url, timeout=5) as ws1:
+            async with websockets.connect(ws_url) as ws1:
                 logger.info("✓ First connection established")
                 
                 # Get room users
