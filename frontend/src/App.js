@@ -486,6 +486,28 @@ const WebRTCDetectionApp = () => {
     }
   };
 
+  // Detection mode switching
+  useEffect(() => {
+    const initializeDetectionMode = async () => {
+      if (detectionMode === 'wasm') {
+        try {
+          setErrors(prev => prev.filter(e => !e.error.includes('WASM')));
+          console.log('Initializing WASM detection mode...');
+          await wasmDetector.loadModel();
+          console.log('WASM detection mode ready');
+        } catch (error) {
+          console.error('Failed to initialize WASM mode:', error);
+          setErrors(prev => [...prev, { 
+            timestamp: Date.now(), 
+            error: `WASM initialization failed: ${error.message}` 
+          }]);
+        }
+      }
+    };
+
+    initializeDetectionMode();
+  }, [detectionMode]);
+
   // Metrics calculation
   useEffect(() => {
     if (isRecording) {
