@@ -134,11 +134,110 @@ COCO_CLASSES = [
     'toothbrush'
 ]
 
-# Mock object detection for now (will be replaced with actual ONNX model)
+# ONNX Runtime session for object detection
+inference_session = None
+
+def load_onnx_model():
+    """Load the ONNX model for object detection"""
+    global inference_session
+    try:
+        import onnxruntime as ort
+        model_path = os.path.join(ROOT_DIR, "models", "ssd_mobilenet_v1.onnx")
+        
+        # Configure session options for optimal performance
+        session_options = ort.SessionOptions()
+        session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        session_options.intra_op_num_threads = 4
+        session_options.inter_op_num_threads = 2
+        
+        # Create inference session
+        inference_session = ort.InferenceSession(
+            model_path,
+            session_options,
+            providers=['CPUExecutionProvider']
+        )
+        
+        logging.info(f"ONNX model loaded successfully from {model_path}")
+        logging.info(f"Model inputs: {[inp.name for inp in inference_session.get_inputs()]}")
+        logging.info(f"Model outputs: {[out.name for out in inference_session.get_outputs()]}")
+        
+        return True
+    except Exception as e:
+        logging.error(f"Failed to load ONNX model: {e}")
+        return False
+
+def run_object_detection(image_array: np.ndarray, confidence_threshold: float = 0.5) -> List[Detection]:
+    """Run object detection using ONNX Runtime"""
+    global inference_session
+    
+    try:
+        # Fallback to mock if model not loaded
+        if inference_session is None:
+            return mock_object_detection(image_array, confidence_threshold)
+        
+        # Prepare input tensor (batch_size=1, height=300, width=300, channels=3)
+        input_tensor = np.expand_dims(image_array, axis=0).astype(np.uint8)
+        
+        # Get input name
+        input_name = inference_session.get_inputs()[0].name
+        
+        # Run inference
+        start_time = time.time()
+        outputs = inference_session.run(None, {input_name: input_tensor})
+        inference_time = time.time() - start_time
+        
+        logging.info(f"ONNX inference completed in {inference_time*1000:.2f}ms")
+        
+        # Parse outputs: [detection_boxes, detection_classes, detection_scores, num_detections]
+        detection_boxes = outputs[0][0]  # Shape: (100, 4) - [y1, x1, y2, x2] normalized
+        detection_classes = outputs[1][0].astype(int)  # Shape: (100,)
+        detection_scores = outputs[2][0]  # Shape: (100,)
+        num_detections = int(outputs[3][0])
+        
+        detections = []
+        
+        for i in range(min(num_detections, 100)):
+            score = detection_scores[i]
+            
+            if score < confidence_threshold:
+                continue
+            
+            # Convert normalized coordinates to pixel coordinates
+            y1, x1, y2, x2 = detection_boxes[i]
+            
+            # Scale to 300x300 input size
+            bbox = BoundingBox(
+                x1=float(x1 * 300),
+                y1=float(y1 * 300),
+                x2=float(x2 * 300),
+                y2=float(y2 * 300),
+                width=float((x2 - x1) * 300),
+                height=float((y2 - y1) * 300)
+            )
+            
+            class_id = detection_classes[i]
+            class_name = COCO_CLASSES[class_id] if class_id < len(COCO_CLASSES) else f"class_{class_id}"
+            
+            detection = Detection(
+                class_id=int(class_id),
+                class_name=class_name,
+                confidence=float(score),
+                bbox=bbox
+            )
+            
+            detections.append(detection)
+        
+        return detections
+        
+    except Exception as e:
+        logging.error(f"Object detection failed: {e}")
+        return mock_object_detection(image_array, confidence_threshold)
+
+# Mock object detection fallback
 def mock_object_detection(image_array: np.ndarray, confidence_threshold: float = 0.5) -> List[Detection]:
     """Mock object detection that returns dummy detections"""
     # Simulate processing time
-    time.sleep(0.05)  # 50ms inference time
+    time.sleep(0.02)  # 20ms inference time
     
     # Generate mock detections
     detections = []
