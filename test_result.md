@@ -275,15 +275,18 @@
           
   - task: "Benchmarking System"
     implemented: true
-    working: true
+    working: false
     file: "bench/run_bench.sh"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "30s benchmark script with Puppeteer automation, metrics.json output"
+        - working: false
+          agent: "testing"
+          comment: "❌ DEPENDENT ON WEBRTC VIDEO STREAMING - Benchmarking system cannot measure performance because video streaming is not functional. No video frames to process, no detection latency to measure. Benchmarking implementation blocked by WebRTC video track reception failure."
 
 ## metadata:
   created_by: "main_agent"
