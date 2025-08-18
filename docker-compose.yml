@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: webrtc-detection-db
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: webrtc_detection
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    build: .
+    container_name: webrtc-detection-backend
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=webrtc_detection
+      - CORS_ORIGINS=*
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend/models:/app/backend/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/api/', timeout=10)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    image: nginx:alpine
+    container_name: webrtc-detection-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend/build:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  default:
+    name: webrtc-detection-network
