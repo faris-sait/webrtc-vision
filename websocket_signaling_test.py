@@ -390,7 +390,7 @@ class WebSocketSignalingTester:
                     logger.info(f"✓ Room tracking working - {user_count} user(s) in room")
                     
                     # Test 2: Multiple connections
-                    async with websockets.connect(ws_url, timeout=5) as ws2:
+                    async with websockets.connect(ws_url) as ws2:
                         logger.info("✓ Second connection established")
                         
                         # Wait for user_joined message on first connection
