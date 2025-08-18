@@ -33,12 +33,19 @@ const WebRTCDetectionApp = () => {
   const localStreamRef = useRef(null);
   const metricsIntervalRef = useRef(null);
   const frameCountRef = useRef(0);
+  const frameQueueRef = useRef(null);
+  const processLoopRef = useRef(null);
 
   // Performance tracking
   const performanceDataRef = useRef({
     frameTimestamps: [],
     latencies: [],
-    detectionTimes: []
+    detectionTimes: [],
+    wasmMetrics: {
+      queueLength: 0,
+      dropRate: 0,
+      actualFPS: 0
+    }
   });
 
   const generateRoomId = () => {
