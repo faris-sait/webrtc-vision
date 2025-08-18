@@ -752,7 +752,7 @@ const WebRTCDetectionApp = () => {
             <div className="mt-6 bg-slate-800 rounded-xl p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center">
                 <BarChart3 className="w-5 h-5 mr-2" />
-                Performance Metrics
+                Performance Metrics ({detectionMode.toUpperCase()})
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
@@ -761,17 +761,40 @@ const WebRTCDetectionApp = () => {
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-400">{metrics.latency}ms</div>
-                  <div className="text-sm text-gray-400">Latency</div>
+                  <div className="text-sm text-gray-400">E2E Latency</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-400">{metrics.detectionCount}</div>
                   <div className="text-sm text-gray-400">Objects</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-yellow-400">{metrics.bandwidth}</div>
-                  <div className="text-sm text-gray-400">Kbps</div>
+                  <div className="text-2xl font-bold text-yellow-400">
+                    {detectionMode === 'wasm' ? 
+                      `${performanceDataRef.current.wasmMetrics.dropRate?.toFixed(1) || 0}%` : 
+                      `${metrics.bandwidth}`
+                    }
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    {detectionMode === 'wasm' ? 'Drop Rate' : 'Kbps'}
+                  </div>
                 </div>
               </div>
+              
+              {/* WASM-specific metrics */}
+              {detectionMode === 'wasm' && (
+                <div className="mt-4 pt-4 border-t border-slate-700">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Queue Length:</span>
+                      <span className="text-white">{performanceDataRef.current.wasmMetrics.queueLength || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Processed:</span>
+                      <span className="text-white">{performanceDataRef.current.wasmMetrics.processedFrames || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
