@@ -63,6 +63,7 @@ const WebRTCDetectionApp = () => {
 
     async connect() {
       try {
+        console.log('🌐 HTTP Signaling: Attempting to join room...');
         // Join room
         const response = await fetch(`${API_URL}/api/signaling/${this.roomId}/join`, {
           method: 'POST',
@@ -70,15 +71,23 @@ const WebRTCDetectionApp = () => {
           body: JSON.stringify({ client_id: this.clientId })
         });
         
+        console.log(`📞 HTTP Signaling: Join room response status: ${response.status}`);
+        
         if (response.ok) {
+          const data = await response.json();
+          console.log('📞 HTTP Signaling: Join room success:', data);
+          
           this.connected = true;
           this.onStatusChange('connected');
           this.startPolling();
-          console.log('HTTP Signaling connected');
+          console.log('✅ HTTP Signaling connected successfully');
           return true;
+        } else {
+          const errorText = await response.text();
+          console.error('❌ HTTP Signaling join room failed:', response.status, errorText);
         }
       } catch (error) {
-        console.error('HTTP Signaling connection failed:', error);
+        console.error('❌ HTTP Signaling connection failed:', error);
         this.onStatusChange('error');
         return false;
       }
