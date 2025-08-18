@@ -66,7 +66,7 @@ class WebSocketSignalingTester:
             local_ws_url = f"{WS_LOCAL}/ws/{test_room_id}"
             
             # Try to connect locally
-            async with websockets.connect(local_ws_url, timeout=5) as websocket:
+            async with websockets.connect(local_ws_url) as websocket:
                 logger.info(f"✓ LOCAL WebSocket connected successfully to {local_ws_url}")
                 
                 # Test basic message exchange
