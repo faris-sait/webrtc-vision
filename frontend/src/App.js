@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 import { QRCodeSVG } from 'qrcode.react';
 import { Camera, Video, Monitor, Smartphone, Zap, BarChart3, Settings, Play, Square, AlertCircle } from 'lucide-react';
+import wasmDetector from './utils/wasmDetection';
+import FrameQueue from './utils/frameQueue';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const WS_URL = BACKEND_URL.replace('https:', 'wss:').replace('http:', 'ws:');
