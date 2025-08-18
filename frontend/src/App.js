@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './App.css';
 import { QRCodeSVG } from 'qrcode.react';
 import { Camera, Video, Monitor, Smartphone, Zap, BarChart3, Settings, Play, Square, AlertCircle } from 'lucide-react';
+import wasmDetector from './utils/wasmDetection';
+import FrameQueue from './utils/frameQueue';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const WS_URL = BACKEND_URL.replace('https:', 'wss:').replace('http:', 'ws:');
@@ -31,12 +33,19 @@ const WebRTCDetectionApp = () => {
   const localStreamRef = useRef(null);
   const metricsIntervalRef = useRef(null);
   const frameCountRef = useRef(0);
+  const frameQueueRef = useRef(null);
+  const processLoopRef = useRef(null);
 
   // Performance tracking
   const performanceDataRef = useRef({
     frameTimestamps: [],
     latencies: [],
-    detectionTimes: []
+    detectionTimes: [],
+    wasmMetrics: {
+      queueLength: 0,
+      dropRate: 0,
+      actualFPS: 0
+    }
   });
 
   const generateRoomId = () => {
@@ -90,7 +99,14 @@ const WebRTCDetectionApp = () => {
           break;
 
         case 'detection_result':
-          handleDetectionResult(message);
+          // Handle server detection result
+          if (window.pendingDetections && window.pendingDetections[message.frame_id]) {
+            window.pendingDetections[message.frame_id](message);
+            delete window.pendingDetections[message.frame_id];
+          } else {
+            // Fallback for direct handling
+            handleDetectionResult(message);
+          }
           break;
 
         case 'detection_error':
@@ -200,16 +216,122 @@ const WebRTCDetectionApp = () => {
     }
   };
 
+  // Initialize frame queue
+  const initializeFrameQueue = () => {
+    if (!frameQueueRef.current) {
+      frameQueueRef.current = new FrameQueue(5, 15); // Max 5 frames, target 15 FPS
+    }
+  };
+
+  // WASM Detection processing function
+  const processWASMDetection = async (frame) => {
+    try {
+      const result = await wasmDetector.detect(frame.data, 0.5);
+      
+      return {
+        type: 'detection_result',
+        frame_id: frame.id,
+        capture_ts: frame.captureTimestamp,
+        recv_ts: frame.queueTimestamp,
+        inference_ts: performance.now(),
+        detections: result.detections,
+        mode: 'wasm'
+      };
+    } catch (error) {
+      console.error('WASM detection failed:', error);
+      return null;
+    }
+  };
+
+  // Server detection processing function  
+  const processServerDetection = async (frame) => {
+    return new Promise((resolve) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        // Store resolve function to call when server responds
+        const frameId = frame.id;
+        window.pendingDetections = window.pendingDetections || {};
+        window.pendingDetections[frameId] = resolve;
+
+        wsRef.current.send(JSON.stringify({
+          type: 'detection_frame',
+          frame_id: frameId,
+          frame_data: frame.data,
+          capture_ts: frame.captureTimestamp
+        }));
+
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          if (window.pendingDetections && window.pendingDetections[frameId]) {
+            delete window.pendingDetections[frameId];
+            resolve(null);
+          }
+        }, 5000);
+      } else {
+        resolve(null);
+      }
+    });
+  };
+
+  // Frame processing loop
+  const startFrameProcessingLoop = () => {
+    if (processLoopRef.current) return;
+
+    const processLoop = async () => {
+      if (!frameQueueRef.current || !isRecording) {
+        processLoopRef.current = null;
+        return;
+      }
+
+      try {
+        const processFunction = detectionMode === 'wasm' ? 
+          processWASMDetection : processServerDetection;
+        
+        const result = await frameQueueRef.current.dequeue(processFunction);
+        
+        if (result) {
+          handleDetectionResult(result);
+        }
+
+        // Update WASM metrics
+        if (detectionMode === 'wasm' && frameQueueRef.current) {
+          const queueMetrics = frameQueueRef.current.getMetrics();
+          performanceDataRef.current.wasmMetrics = queueMetrics;
+          
+          // Auto-adjust FPS for WASM mode
+          frameQueueRef.current.autoAdjustFPS();
+        }
+
+      } catch (error) {
+        console.error('Frame processing error:', error);
+      }
+
+      // Continue processing loop
+      if (isRecording) {
+        processLoopRef.current = setTimeout(processLoop, 16); // ~60 FPS check
+      } else {
+        processLoopRef.current = null;
+      }
+    };
+
+    processLoopRef.current = setTimeout(processLoop, 0);
+  };
+
   // Object detection
   const startObjectDetection = (stream) => {
     if (!canvasRef.current || !stream) return;
+
+    // Initialize frame queue
+    initializeFrameQueue();
+    
+    // Start frame processing loop
+    startFrameProcessingLoop();
 
     const video = remoteVideoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
-    const processFrame = () => {
-      if (!video || video.paused || video.ended) return;
+    const captureFrame = () => {
+      if (!video || video.paused || video.ended || !isRecording) return;
 
       // Set canvas size to match video
       canvas.width = video.videoWidth || 640;
@@ -220,38 +342,35 @@ const WebRTCDetectionApp = () => {
 
       // Capture frame for detection
       const frameData = canvas.toDataURL('image/jpeg', 0.8);
-      const frameId = `frame_${frameCountRef.current++}`;
       const captureTs = performance.now();
 
-      // Send frame for detection
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({
-          type: 'detection_frame',
-          frame_id: frameId,
-          frame_data: frameData,
-          capture_ts: captureTs
-        }));
+      // Add frame to queue (with backpressure handling)
+      if (frameQueueRef.current) {
+        const success = frameQueueRef.current.enqueue(frameData, captureTs);
+        if (!success) {
+          console.log('Frame dropped due to backpressure');
+        }
       }
 
-      // Continue processing
+      // Continue capturing
       if (isRecording) {
-        requestAnimationFrame(processFrame);
+        requestAnimationFrame(captureFrame);
       }
     };
 
     if (isRecording) {
-      processFrame();
+      captureFrame();
     }
   };
 
   const handleDetectionResult = (result) => {
     const now = performance.now();
     const e2eLatency = now - result.capture_ts;
-    const serverLatency = result.inference_ts - result.recv_ts;
+    const serverLatency = (result.inference_ts - result.recv_ts) || 0;
 
     // Update performance data
     performanceDataRef.current.latencies.push(e2eLatency);
-    performanceDataRef.current.detectionTimes.push(result.inference_ts - result.recv_ts);
+    performanceDataRef.current.detectionTimes.push(serverLatency);
 
     // Keep only last 100 measurements
     if (performanceDataRef.current.latencies.length > 100) {
@@ -265,11 +384,16 @@ const WebRTCDetectionApp = () => {
     // Draw detections on canvas
     drawDetections(result.detections || []);
 
-    // Update metrics
+    // Update metrics with mode-specific information
+    const modeMetrics = detectionMode === 'wasm' ? 
+      performanceDataRef.current.wasmMetrics : {};
+    
     setMetrics(prev => ({
       ...prev,
       latency: Math.round(e2eLatency),
-      detectionCount: result.detections?.length || 0
+      detectionCount: result.detections?.length || 0,
+      fps: modeMetrics.actualFPS || prev.fps,
+      bandwidth: result.mode === 'wasm' ? 0 : prev.bandwidth // WASM doesn't use bandwidth
     }));
   };
 
@@ -362,6 +486,28 @@ const WebRTCDetectionApp = () => {
     }
   };
 
+  // Detection mode switching
+  useEffect(() => {
+    const initializeDetectionMode = async () => {
+      if (detectionMode === 'wasm') {
+        try {
+          setErrors(prev => prev.filter(e => !e.error.includes('WASM')));
+          console.log('Initializing WASM detection mode...');
+          await wasmDetector.loadModel();
+          console.log('WASM detection mode ready');
+        } catch (error) {
+          console.error('Failed to initialize WASM mode:', error);
+          setErrors(prev => [...prev, { 
+            timestamp: Date.now(), 
+            error: `WASM initialization failed: ${error.message}` 
+          }]);
+        }
+      }
+    };
+
+    initializeDetectionMode();
+  }, [detectionMode]);
+
   // Metrics calculation
   useEffect(() => {
     if (isRecording) {
@@ -436,9 +582,26 @@ const WebRTCDetectionApp = () => {
     setIsRecording(false);
     setCurrentView('home');
     
+    // Stop frame processing loop
+    if (processLoopRef.current) {
+      clearTimeout(processLoopRef.current);
+      processLoopRef.current = null;
+    }
+    
+    // Clear frame queue
+    if (frameQueueRef.current) {
+      frameQueueRef.current.clear();
+    }
+    
+    // Clear pending detections
+    if (window.pendingDetections) {
+      window.pendingDetections = {};
+    }
+    
     // Stop local stream
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
     }
     
     // Close peer connection
@@ -446,6 +609,10 @@ const WebRTCDetectionApp = () => {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
+    
+    // Reset metrics
+    setMetrics({ fps: 0, latency: 0, detectionCount: 0, bandwidth: 0 });
+    setDetections([]);
   };
 
   // Render different views
@@ -585,7 +752,7 @@ const WebRTCDetectionApp = () => {
             <div className="mt-6 bg-slate-800 rounded-xl p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center">
                 <BarChart3 className="w-5 h-5 mr-2" />
-                Performance Metrics
+                Performance Metrics ({detectionMode.toUpperCase()})
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
@@ -594,17 +761,40 @@ const WebRTCDetectionApp = () => {
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-400">{metrics.latency}ms</div>
-                  <div className="text-sm text-gray-400">Latency</div>
+                  <div className="text-sm text-gray-400">E2E Latency</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-400">{metrics.detectionCount}</div>
                   <div className="text-sm text-gray-400">Objects</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-yellow-400">{metrics.bandwidth}</div>
-                  <div className="text-sm text-gray-400">Kbps</div>
+                  <div className="text-2xl font-bold text-yellow-400">
+                    {detectionMode === 'wasm' ? 
+                      `${performanceDataRef.current.wasmMetrics.dropRate?.toFixed(1) || 0}%` : 
+                      `${metrics.bandwidth}`
+                    }
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    {detectionMode === 'wasm' ? 'Drop Rate' : 'Kbps'}
+                  </div>
                 </div>
               </div>
+              
+              {/* WASM-specific metrics */}
+              {detectionMode === 'wasm' && (
+                <div className="mt-4 pt-4 border-t border-slate-700">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Queue Length:</span>
+                      <span className="text-white">{performanceDataRef.current.wasmMetrics.queueLength || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Processed:</span>
+                      <span className="text-white">{performanceDataRef.current.wasmMetrics.processedFrames || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
