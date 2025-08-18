@@ -278,7 +278,7 @@ def mock_object_detection(image_array: np.ndarray, confidence_threshold: float =
     return detections
 
 def preprocess_image(image_data: str) -> np.ndarray:
-    """Preprocess base64 encoded image for inference"""
+    """Preprocess base64 encoded image for ONNX inference"""
     try:
         # Decode base64 image
         image_bytes = base64.b64decode(image_data.split(',')[1] if ',' in image_data else image_data)
@@ -293,8 +293,8 @@ def preprocess_image(image_data: str) -> np.ndarray:
         # Resize to model input size (300x300 for MobileNet-SSD)
         image = image.resize((300, 300), Image.LANCZOS)
         
-        # Convert to numpy array
-        image_array = np.array(image).astype(np.float32)
+        # Convert to numpy array (uint8 format for ONNX model)
+        image_array = np.array(image).astype(np.uint8)
         
         return image_array
         
