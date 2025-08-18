@@ -9,6 +9,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 // Temporary tunnel URL for testing WebSocket functionality
 const TUNNEL_URL = 'https://732980370df48a.lhr.life';
 const WS_URL = TUNNEL_URL.replace('https:', 'wss:').replace('http:', 'ws:');
+const API_URL = TUNNEL_URL;
 
 const WebRTCDetectionApp = () => {
   // State management
