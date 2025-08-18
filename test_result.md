@@ -233,15 +233,18 @@
           
   - task: "Frame Queue & Backpressure"
     implemented: true
-    working: true
+    working: false
     file: "utils/frameQueue.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Frame queue with fixed-length, adaptive rate control, backpressure handling implemented"
+        - working: false
+          agent: "testing"
+          comment: "❌ DEPENDENT ON WEBRTC VIDEO STREAMING - Frame queue system cannot function because no video frames are being captured. Video element has no stream source, so frame capture loop never starts. Frame queue implementation is correct but blocked by WebRTC video track reception failure."
           
   - task: "Docker Infrastructure"
     implemented: true
