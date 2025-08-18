@@ -387,15 +387,15 @@ const WebRTCDetectionApp = () => {
     });
 
     peerConnection.onicecandidate = (event) => {
-      if (event.candidate && wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({
+      if (event.candidate) {
+        sendSignalingMessage({
           type: 'ice_candidate',
           data: {
             candidate: event.candidate.candidate,
             sdpMid: event.candidate.sdpMid,
             sdpMLineIndex: event.candidate.sdpMLineIndex
           }
-        }));
+        });
       }
     };
 
