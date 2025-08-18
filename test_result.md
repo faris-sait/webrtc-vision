@@ -296,11 +296,9 @@
 
 ## test_plan:
   current_focus:
-    - "WASM Mode Implementation"
-    - "Frame Queue & Backpressure" 
-    - "Benchmarking System"
-    - "Start Scripts & Ngrok"
-  stuck_tasks: []
+    - "WebRTC Phone to Browser Streaming"
+  stuck_tasks:
+    - "WebRTC Phone to Browser Streaming"
   test_all: true
   test_priority: "high_first"
 
