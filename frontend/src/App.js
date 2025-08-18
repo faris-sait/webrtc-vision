@@ -862,6 +862,9 @@ const WebRTCDetectionApp = () => {
 
       // Add stream to peer connection
       if (peerConnectionRef.current) {
+        console.log('📱🎯 DEBUG: Starting WebRTC offer creation process');
+        console.log('📱🎯 DEBUG: Peer connection state:', peerConnectionRef.current.connectionState);
+        console.log('📱🎯 DEBUG: Signaling state:', peerConnectionRef.current.signalingState);
         console.log('📱 DEBUG: Adding tracks to peer connection');
         console.log('📱 DEBUG: Stream tracks:', stream.getTracks());
         
@@ -876,10 +879,25 @@ const WebRTCDetectionApp = () => {
         });
         console.log('📱 DEBUG: All tracks added to peer connection');
 
+        // Verify tracks were added
+        const senders = peerConnectionRef.current.getSenders();
+        console.log('📱🎯 DEBUG: Peer connection senders after addTrack:', senders);
+        senders.forEach((sender, index) => {
+          console.log(`📱🎯 DEBUG: Sender ${index}:`, {
+            track: sender.track,
+            trackKind: sender.track?.kind,
+            trackEnabled: sender.track?.enabled,
+            trackReadyState: sender.track?.readyState
+          });
+        });
+
         // Create and send offer
+        console.log('📱🎯 DEBUG: Creating offer...');
         const offer = await peerConnectionRef.current.createOffer();
+        console.log('📱🎯 DEBUG: Offer created:', offer);
+        
         await peerConnectionRef.current.setLocalDescription(offer);
-        console.log('📱 DEBUG: Created and set local offer');
+        console.log('📱🎯 DEBUG: Local description set, signaling state:', peerConnectionRef.current.signalingState);
 
         sendSignalingMessage({
           type: 'offer',
@@ -888,7 +906,9 @@ const WebRTCDetectionApp = () => {
             type: offer.type
           }
         });
-        console.log('📱 DEBUG: Sent offer via signaling');
+        console.log('📱🎯 DEBUG: Offer sent via signaling');
+      } else {
+        console.error('📱❌ ERROR: No peer connection available when trying to add tracks');
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
