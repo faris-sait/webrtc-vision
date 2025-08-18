@@ -9,6 +9,13 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const WS_URL = BACKEND_URL.replace('https:', 'wss:').replace('http:', 'ws:');
 const API_URL = BACKEND_URL;
 
+// Debug logging
+console.log('🔧 DEBUG: Environment variables');
+console.log('REACT_APP_BACKEND_URL:', process.env.REACT_APP_BACKEND_URL);
+console.log('BACKEND_URL:', BACKEND_URL);
+console.log('WS_URL:', WS_URL);
+console.log('API_URL:', API_URL);
+
 const WebRTCDetectionApp = () => {
   // State management
   const [currentView, setCurrentView] = useState('home');
