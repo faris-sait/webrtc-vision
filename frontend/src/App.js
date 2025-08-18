@@ -209,16 +209,122 @@ const WebRTCDetectionApp = () => {
     }
   };
 
+  // Initialize frame queue
+  const initializeFrameQueue = () => {
+    if (!frameQueueRef.current) {
+      frameQueueRef.current = new FrameQueue(5, 15); // Max 5 frames, target 15 FPS
+    }
+  };
+
+  // WASM Detection processing function
+  const processWASMDetection = async (frame) => {
+    try {
+      const result = await wasmDetector.detect(frame.data, 0.5);
+      
+      return {
+        type: 'detection_result',
+        frame_id: frame.id,
+        capture_ts: frame.captureTimestamp,
+        recv_ts: frame.queueTimestamp,
+        inference_ts: performance.now(),
+        detections: result.detections,
+        mode: 'wasm'
+      };
+    } catch (error) {
+      console.error('WASM detection failed:', error);
+      return null;
+    }
+  };
+
+  // Server detection processing function  
+  const processServerDetection = async (frame) => {
+    return new Promise((resolve) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        // Store resolve function to call when server responds
+        const frameId = frame.id;
+        window.pendingDetections = window.pendingDetections || {};
+        window.pendingDetections[frameId] = resolve;
+
+        wsRef.current.send(JSON.stringify({
+          type: 'detection_frame',
+          frame_id: frameId,
+          frame_data: frame.data,
+          capture_ts: frame.captureTimestamp
+        }));
+
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          if (window.pendingDetections && window.pendingDetections[frameId]) {
+            delete window.pendingDetections[frameId];
+            resolve(null);
+          }
+        }, 5000);
+      } else {
+        resolve(null);
+      }
+    });
+  };
+
+  // Frame processing loop
+  const startFrameProcessingLoop = () => {
+    if (processLoopRef.current) return;
+
+    const processLoop = async () => {
+      if (!frameQueueRef.current || !isRecording) {
+        processLoopRef.current = null;
+        return;
+      }
+
+      try {
+        const processFunction = detectionMode === 'wasm' ? 
+          processWASMDetection : processServerDetection;
+        
+        const result = await frameQueueRef.current.dequeue(processFunction);
+        
+        if (result) {
+          handleDetectionResult(result);
+        }
+
+        // Update WASM metrics
+        if (detectionMode === 'wasm' && frameQueueRef.current) {
+          const queueMetrics = frameQueueRef.current.getMetrics();
+          performanceDataRef.current.wasmMetrics = queueMetrics;
+          
+          // Auto-adjust FPS for WASM mode
+          frameQueueRef.current.autoAdjustFPS();
+        }
+
+      } catch (error) {
+        console.error('Frame processing error:', error);
+      }
+
+      // Continue processing loop
+      if (isRecording) {
+        processLoopRef.current = setTimeout(processLoop, 16); // ~60 FPS check
+      } else {
+        processLoopRef.current = null;
+      }
+    };
+
+    processLoopRef.current = setTimeout(processLoop, 0);
+  };
+
   // Object detection
   const startObjectDetection = (stream) => {
     if (!canvasRef.current || !stream) return;
+
+    // Initialize frame queue
+    initializeFrameQueue();
+    
+    // Start frame processing loop
+    startFrameProcessingLoop();
 
     const video = remoteVideoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
-    const processFrame = () => {
-      if (!video || video.paused || video.ended) return;
+    const captureFrame = () => {
+      if (!video || video.paused || video.ended || !isRecording) return;
 
       // Set canvas size to match video
       canvas.width = video.videoWidth || 640;
@@ -229,27 +335,24 @@ const WebRTCDetectionApp = () => {
 
       // Capture frame for detection
       const frameData = canvas.toDataURL('image/jpeg', 0.8);
-      const frameId = `frame_${frameCountRef.current++}`;
       const captureTs = performance.now();
 
-      // Send frame for detection
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({
-          type: 'detection_frame',
-          frame_id: frameId,
-          frame_data: frameData,
-          capture_ts: captureTs
-        }));
+      // Add frame to queue (with backpressure handling)
+      if (frameQueueRef.current) {
+        const success = frameQueueRef.current.enqueue(frameData, captureTs);
+        if (!success) {
+          console.log('Frame dropped due to backpressure');
+        }
       }
 
-      // Continue processing
+      // Continue capturing
       if (isRecording) {
-        requestAnimationFrame(processFrame);
+        requestAnimationFrame(captureFrame);
       }
     };
 
     if (isRecording) {
-      processFrame();
+      captureFrame();
     }
   };
 
