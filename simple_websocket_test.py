@@ -61,7 +61,7 @@ async def test_error_details():
             }
             
             async with session.post(
-                "https://live-object-detect.preview.emergentagent.com/api/detect",
+                "https://qr-join-debug.preview.emergentagent.com/api/detect",
                 json=invalid_request,
                 headers={"Content-Type": "application/json"}
             ) as response:

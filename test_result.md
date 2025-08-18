@@ -120,7 +120,7 @@
     implemented: true
     working: true
     file: "server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
@@ -130,6 +130,12 @@
         - working: true
           agent: "testing"
           comment: "✓ BACKEND WEBSOCKET IMPLEMENTATION VERIFIED - WebSocket endpoint exists at /ws/{room_id}, signaling manager implemented with room management, detection frame processing, offer/answer/ice candidate handling. External WebSocket connectivity limited by infrastructure but core functionality confirmed through code review and API testing."
+        - working: false
+          agent: "main"
+          comment: "DEBUGGING WEBSOCKET ISSUE: User reports WebRTC connection failing between phone and browser with both showing 'disconnected'. Investigation shows WebSocket connections not reaching backend through Kubernetes ingress. Ingress returns HTTP/2 200 with HTML instead of HTTP/1.1 101 Switching Protocols for WebSocket upgrade requests. Backend WebSocket endpoint works locally but fails through external ingress. Root cause: Kubernetes ingress not configured for WebSocket support."
+        - working: true
+          agent: "testing"
+          comment: "✅ COMPREHENSIVE WEBSOCKET SIGNALING TESTING COMPLETED - LOCAL WebSocket endpoint at /ws/{room_id} is FULLY FUNCTIONAL: (1) WebSocket connections work locally with proper handshake; (2) WebRTC signaling flow verified - offer/answer/ice_candidate exchange working perfectly; (3) Detection frame processing through WebSocket working with ~188ms processing time; (4) Connection state tracking working - user join/leave notifications, room management; (5) SignalingManager properly tracks connections and rooms. EXTERNAL WebSocket fails due to Kubernetes ingress not configured for WebSocket upgrades (returns HTTP/2 200 with HTML instead of HTTP/1.1 101). Backend implementation is production-ready - infrastructure fix needed."
           
   - task: "ONNX Object Detection Server Mode"
     implemented: true
@@ -279,3 +285,9 @@
       message: "Major implementation completed! Added WASM mode with onnxruntime-web, frame queue with backpressure handling, complete Docker infrastructure, start.sh with ngrok support, and benchmarking system. All core requirements now implemented. Ready for comprehensive testing."
     - agent: "testing"
       message: "✅ BACKEND TESTING COMPLETED SUCCESSFULLY - All core backend APIs are working perfectly: (1) ONNX Object Detection API with real MobileNet-SSD model loaded, ~165ms inference time, proper response schema; (2) Metrics system with MongoDB storage/retrieval working; (3) Room management API functional; (4) WebSocket signaling implementation verified (external connectivity limited by infrastructure); (5) Performance testing passed with concurrent requests. Backend is production-ready for WebRTC multi-object detection system."
+    - agent: "user"
+      message: "CRITICAL ISSUE: WebRTC connection failing in QR join flow. Phone camera preview works but both phone and laptop show 'connection status: disconnected'. WebRTC signaling/ICE negotiation not completing. Need help debugging: (1) Check backend logs for SDP offer/answer exchange, (2) Verify ICE candidates exchange via WebSocket, (3) Fix NAT/firewall issues with STUN/TURN servers, (4) Ensure SDP answer sent back to client."
+    - agent: "main"  
+      message: "WEBSOCKET DEBUGGING COMPLETED: Root cause identified - Kubernetes ingress not configured for WebSocket upgrades. WebSocket connections fail at ingress level before reaching FastAPI backend. Backend endpoint works locally (HTTP 400 expected for incomplete handshake) but external ingress returns HTTP/2 200 with HTML instead of HTTP/1.1 101 Switching Protocols. Tried moving endpoint to /api/ws/ but nginx.conf expects /ws/ path. Infrastructure-level fix needed for WebSocket support."
+    - agent: "testing"
+      message: "🎯 WEBSOCKET SIGNALING ROOT CAUSE ANALYSIS COMPLETE: Backend WebSocket implementation is FULLY FUNCTIONAL locally. Comprehensive testing confirms: (1) WebSocket endpoint /ws/{room_id} works perfectly with proper handshake; (2) WebRTC signaling (offer/answer/ice_candidate) exchange working flawlessly; (3) Detection frame processing via WebSocket operational (~188ms); (4) Connection state tracking and room management working; (5) SignalingManager handles multiple connections correctly. EXTERNAL failure confirmed due to Kubernetes ingress returning HTTP/2 200 with HTML instead of WebSocket upgrade. Backend code is production-ready - only infrastructure configuration needed for external WebSocket support."
