@@ -423,38 +423,67 @@ const WebRTCDetectionApp = () => {
     };
 
     peerConnection.ontrack = (event) => {
-      console.log('🎥 DEBUG: Received remote track event', event);
-      console.log('🎥 DEBUG: Track kind:', event.track?.kind);
-      console.log('🎥 DEBUG: Track enabled:', event.track?.enabled);
-      console.log('🎥 DEBUG: Track readyState:', event.track?.readyState);
-      console.log('🎥 DEBUG: Event streams:', event.streams);
-      console.log('🎥 DEBUG: Stream tracks:', event.streams[0]?.getTracks());
+      console.log('🎥🎯 DEBUG: *** ONTRACK EVENT FIRED ***');
+      console.log('🎥🎯 DEBUG: Event object:', event);
+      console.log('🎥🎯 DEBUG: Track kind:', event.track?.kind);
+      console.log('🎥🎯 DEBUG: Track enabled:', event.track?.enabled);
+      console.log('🎥🎯 DEBUG: Track readyState:', event.track?.readyState);
+      console.log('🎥🎯 DEBUG: Track ID:', event.track?.id);
+      console.log('🎥🎯 DEBUG: Event streams array:', event.streams);
+      console.log('🎥🎯 DEBUG: Stream count:', event.streams?.length);
       
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-        console.log('🎥 DEBUG: Set video srcObject to stream');
+      if (event.streams && event.streams.length > 0) {
+        const stream = event.streams[0];
+        console.log('🎥🎯 DEBUG: Stream ID:', stream.id);
+        console.log('🎥🎯 DEBUG: Stream tracks:', stream.getTracks());
+        console.log('🎥🎯 DEBUG: Stream video tracks:', stream.getVideoTracks());
+        console.log('🎥🎯 DEBUG: Stream audio tracks:', stream.getAudioTracks());
         
-        // Add video event listeners for debugging
-        const video = remoteVideoRef.current;
-        video.onloadedmetadata = () => {
-          console.log('🎥 DEBUG: Video metadata loaded', {
-            videoWidth: video.videoWidth,
-            videoHeight: video.videoHeight,
-            duration: video.duration
+        if (remoteVideoRef.current) {
+          console.log('🎥🎯 DEBUG: Setting video srcObject to received stream');
+          remoteVideoRef.current.srcObject = stream;
+          console.log('🎥🎯 DEBUG: Video srcObject set successfully');
+          
+          // Add comprehensive video event listeners for debugging
+          const video = remoteVideoRef.current;
+          
+          video.onloadstart = () => console.log('🎥 Video: loadstart event');
+          video.onloadeddata = () => console.log('🎥 Video: loadeddata event');
+          video.onloadedmetadata = () => {
+            console.log('🎥 Video: loadedmetadata event', {
+              videoWidth: video.videoWidth,
+              videoHeight: video.videoHeight,
+              duration: video.duration,
+              readyState: video.readyState
+            });
+          };
+          video.oncanplay = () => {
+            console.log('🎥 Video: canplay event');
+          };
+          video.oncanplaythrough = () => {
+            console.log('🎥 Video: canplaythrough event');
+          };
+          video.onplay = () => {
+            console.log('🎥 Video: play event - Video started playing');
+          };
+          video.onerror = (e) => {
+            console.error('🎥 Video error event:', e);
+          };
+          
+          // Try to play the video
+          video.play().then(() => {
+            console.log('🎥 Video: play() promise resolved');
+          }).catch(err => {
+            console.error('🎥 Video: play() promise rejected:', err);
           });
-        };
-        
-        video.oncanplay = () => {
-          console.log('🎥 DEBUG: Video can play');
-        };
-        
-        video.onplay = () => {
-          console.log('🎥 DEBUG: Video started playing');
-        };
-        
-        startObjectDetection(event.streams[0]);
+          
+          // Start object detection with the received stream
+          startObjectDetection(stream);
+        } else {
+          console.error('🎥🎯 ERROR: remoteVideoRef.current is null when ontrack fired');
+        }
       } else {
-        console.error('🎥 ERROR: remoteVideoRef.current is null');
+        console.error('🎥🎯 ERROR: No streams in ontrack event');
       }
     };
 
