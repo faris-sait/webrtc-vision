@@ -190,16 +190,64 @@
           comment: "Live metrics display for FPS, latency, detection count, bandwidth"
           
   - task: "WASM Mode Implementation"
-    implemented: false
-    working: "NA"
-    file: "App.js"
+    implemented: true
+    working: true
+    file: "App.js, utils/wasmDetection.js"
     stuck_count: 0
     priority: "high"
     needs_retesting: true
     status_history:
-        - working: "NA"
+        - working: true
           agent: "main"
-          comment: "WASM mode UI exists but client-side inference not implemented yet"
+          comment: "WASM mode implemented with onnxruntime-web, client-side inference, frame queue management"
+          
+  - task: "Frame Queue & Backpressure"
+    implemented: true
+    working: true
+    file: "utils/frameQueue.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Frame queue with fixed-length, adaptive rate control, backpressure handling implemented"
+          
+  - task: "Docker Infrastructure"
+    implemented: true
+    working: true
+    file: "Dockerfile, docker-compose.yml, nginx.conf"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Complete Docker setup with multi-stage build, nginx proxy, health checks"
+          
+  - task: "Start Scripts & Ngrok"
+    implemented: true
+    working: true
+    file: "start.sh"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Comprehensive start script with ngrok support, mode switching, service management"
+          
+  - task: "Benchmarking System"
+    implemented: true
+    working: true
+    file: "bench/run_bench.sh"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "30s benchmark script with Puppeteer automation, metrics.json output"
 
 ## metadata:
   created_by: "main_agent"
