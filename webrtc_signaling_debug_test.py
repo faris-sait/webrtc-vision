@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Test configuration
-BACKEND_URL = "https://media-track-issue.preview.emergentagent.com"
+BACKEND_URL = "https://video-track-debug.preview.emergentagent.com"
 WS_BASE = BACKEND_URL.replace("https://", "wss://").replace("http://", "ws://")
 
 class WebRTCSignalingDebugger:
