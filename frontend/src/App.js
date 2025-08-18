@@ -761,13 +761,24 @@ const WebRTCDetectionApp = () => {
 
       // Add stream to peer connection
       if (peerConnectionRef.current) {
+        console.log('📱 DEBUG: Adding tracks to peer connection');
+        console.log('📱 DEBUG: Stream tracks:', stream.getTracks());
+        
         stream.getTracks().forEach(track => {
+          console.log('📱 DEBUG: Adding track:', {
+            kind: track.kind,
+            enabled: track.enabled,
+            readyState: track.readyState,
+            id: track.id
+          });
           peerConnectionRef.current.addTrack(track, stream);
         });
+        console.log('📱 DEBUG: All tracks added to peer connection');
 
         // Create and send offer
         const offer = await peerConnectionRef.current.createOffer();
         await peerConnectionRef.current.setLocalDescription(offer);
+        console.log('📱 DEBUG: Created and set local offer');
 
         sendSignalingMessage({
           type: 'offer',
@@ -776,6 +787,7 @@ const WebRTCDetectionApp = () => {
             type: offer.type
           }
         });
+        console.log('📱 DEBUG: Sent offer via signaling');
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
