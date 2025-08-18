@@ -359,11 +359,11 @@ const WebRTCDetectionApp = () => {
   const handleDetectionResult = (result) => {
     const now = performance.now();
     const e2eLatency = now - result.capture_ts;
-    const serverLatency = result.inference_ts - result.recv_ts;
+    const serverLatency = (result.inference_ts - result.recv_ts) || 0;
 
     // Update performance data
     performanceDataRef.current.latencies.push(e2eLatency);
-    performanceDataRef.current.detectionTimes.push(result.inference_ts - result.recv_ts);
+    performanceDataRef.current.detectionTimes.push(serverLatency);
 
     // Keep only last 100 measurements
     if (performanceDataRef.current.latencies.length > 100) {
@@ -377,11 +377,16 @@ const WebRTCDetectionApp = () => {
     // Draw detections on canvas
     drawDetections(result.detections || []);
 
-    // Update metrics
+    // Update metrics with mode-specific information
+    const modeMetrics = detectionMode === 'wasm' ? 
+      performanceDataRef.current.wasmMetrics : {};
+    
     setMetrics(prev => ({
       ...prev,
       latency: Math.round(e2eLatency),
-      detectionCount: result.detections?.length || 0
+      detectionCount: result.detections?.length || 0,
+      fps: modeMetrics.actualFPS || prev.fps,
+      bandwidth: result.mode === 'wasm' ? 0 : prev.bandwidth // WASM doesn't use bandwidth
     }));
   };
 
