@@ -428,14 +428,14 @@ const WebRTCDetectionApp = () => {
       const answer = await peerConnectionRef.current.createAnswer();
       await peerConnectionRef.current.setLocalDescription(answer);
 
-      wsRef.current?.send(JSON.stringify({
+      sendSignalingMessage({
         type: 'answer',
         data: {
           sdp: answer.sdp,
           type: answer.type
         },
         target_id: message.sender_id
-      }));
+      });
     } catch (error) {
       console.error('Error handling offer:', error);
       setErrors(prev => [...prev, { timestamp: Date.now(), error: 'Failed to handle WebRTC offer' }]);
