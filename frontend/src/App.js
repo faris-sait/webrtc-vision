@@ -718,13 +718,13 @@ const WebRTCDetectionApp = () => {
         const offer = await peerConnectionRef.current.createOffer();
         await peerConnectionRef.current.setLocalDescription(offer);
 
-        wsRef.current?.send(JSON.stringify({
+        sendSignalingMessage({
           type: 'offer',
           data: {
             sdp: offer.sdp,
             type: offer.type
           }
-        }));
+        });
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
