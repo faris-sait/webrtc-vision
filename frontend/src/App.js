@@ -274,20 +274,25 @@ const WebRTCDetectionApp = () => {
 
   // Initialize HTTP signaling fallback
   const initHTTPSignaling = async (roomId) => {
-    console.log('Initializing HTTP signaling fallback...');
+    console.log('🔄 Initializing HTTP signaling fallback...');
     
     const httpSignaling = new HTTPSignaling(
       roomId,
       clientIdRef.current,
       handleSignalingMessage,
-      setConnectionStatus
+      (status) => {
+        console.log(`📡 HTTP Signaling status change: ${status}`);
+        setConnectionStatus(status);
+      }
     );
 
+    console.log('🔗 Attempting HTTP signaling connection...');
     const connected = await httpSignaling.connect();
     if (connected) {
       signalingRef.current = httpSignaling;
-      console.log('HTTP signaling fallback connected');
+      console.log('✅ HTTP signaling fallback connected successfully');
     } else {
+      console.error('❌ HTTP signaling fallback failed');
       setConnectionStatus('error');
       setErrors(prev => [...prev, { timestamp: Date.now(), error: 'All signaling methods failed' }]);
     }
