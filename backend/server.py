@@ -302,7 +302,7 @@ def preprocess_image(image_data: str) -> np.ndarray:
         raise HTTPException(status_code=400, detail=f"Image preprocessing failed: {str(e)}")
 
 # WebRTC Signaling WebSocket endpoint
-@app.websocket("/api/ws/{room_id}")
+@app.websocket("/ws/{room_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str):
     client_id = str(uuid.uuid4())
     
