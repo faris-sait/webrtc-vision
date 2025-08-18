@@ -16,7 +16,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-BACKEND_URL = "https://qr-join-debug.preview.emergentagent.com"
+BACKEND_URL = "https://webrtc-debug.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 class FocusedBackendTester:
