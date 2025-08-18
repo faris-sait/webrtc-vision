@@ -468,17 +468,41 @@ const WebRTCDetectionApp = () => {
 
   const handleOffer = async (message) => {
     try {
+      console.log('🎯 DEBUG: Handling offer from', message.sender_id);
+      console.log('🎯 DEBUG: Offer SDP:', message.data);
+
+      // Ensure peer connection exists and is properly set up
       if (!peerConnectionRef.current) {
+        console.log('🎯 DEBUG: Creating new peer connection for offer handling');
         peerConnectionRef.current = setupPeerConnection();
       }
 
+      // Log current peer connection state
+      console.log('🎯 DEBUG: Peer connection state before setRemoteDescription:', peerConnectionRef.current.connectionState);
+      console.log('🎯 DEBUG: Signaling state before setRemoteDescription:', peerConnectionRef.current.signalingState);
+
+      // Set the remote description (the offer)
+      console.log('🎯 DEBUG: Setting remote description...');
       await peerConnectionRef.current.setRemoteDescription(
         new RTCSessionDescription(message.data)
       );
+      console.log('🎯 DEBUG: Remote description set successfully');
 
+      // Log state after setting remote description
+      console.log('🎯 DEBUG: Signaling state after setRemoteDescription:', peerConnectionRef.current.signalingState);
+
+      // Create answer
+      console.log('🎯 DEBUG: Creating answer...');
       const answer = await peerConnectionRef.current.createAnswer();
-      await peerConnectionRef.current.setLocalDescription(answer);
+      console.log('🎯 DEBUG: Answer created:', answer);
 
+      // Set local description
+      console.log('🎯 DEBUG: Setting local description (answer)...');
+      await peerConnectionRef.current.setLocalDescription(answer);
+      console.log('🎯 DEBUG: Local description set successfully');
+      console.log('🎯 DEBUG: Signaling state after setLocalDescription:', peerConnectionRef.current.signalingState);
+
+      // Send the answer back
       sendSignalingMessage({
         type: 'answer',
         data: {
@@ -487,9 +511,11 @@ const WebRTCDetectionApp = () => {
         },
         target_id: message.sender_id
       });
+      console.log('🎯 DEBUG: Answer sent via signaling');
     } catch (error) {
-      console.error('Error handling offer:', error);
-      setErrors(prev => [...prev, { timestamp: Date.now(), error: 'Failed to handle WebRTC offer' }]);
+      console.error('❌ Error handling offer:', error);
+      console.error('❌ Error details:', error.message, error.stack);
+      setErrors(prev => [...prev, { timestamp: Date.now(), error: `Failed to handle WebRTC offer: ${error.message}` }]);
     }
   };
 
