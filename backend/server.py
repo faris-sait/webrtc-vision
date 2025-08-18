@@ -1,15 +1,22 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, WebSocket, WebSocketDisconnect, File, UploadFile, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import json
+import uuid
+import time
+import asyncio
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List
-import uuid
+from typing import List, Dict, Any, Optional
 from datetime import datetime
-
+import numpy as np
+from PIL import Image
+import io
+import base64
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -19,40 +26,325 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
-app = FastAPI()
+# Create the main app
+app = FastAPI(
+    title="WebRTC Multi-Object Detection System",
+    description="Real-time object detection with WebRTC streaming",
+    version="1.0.0"
+)
 
-# Create a router with the /api prefix
+# Create API router
 api_router = APIRouter(prefix="/api")
 
+# WebRTC Signaling Manager
+class SignalingManager:
+    def __init__(self):
+        self.connections: Dict[str, WebSocket] = {}
+        self.rooms: Dict[str, List[str]] = {}
+        
+    async def connect(self, websocket: WebSocket, client_id: str, room_id: str):
+        await websocket.accept()
+        self.connections[client_id] = websocket
+        
+        if room_id not in self.rooms:
+            self.rooms[room_id] = []
+        self.rooms[room_id].append(client_id)
+        
+        logging.info(f"Client {client_id} connected to room {room_id}")
+        
+        # Notify others in the room
+        await self.broadcast_to_room({
+            "type": "user_joined",
+            "client_id": client_id,
+            "timestamp": time.time()
+        }, room_id, client_id)
+        
+    def disconnect(self, client_id: str, room_id: str):
+        if client_id in self.connections:
+            del self.connections[client_id]
+        
+        if room_id in self.rooms and client_id in self.rooms[room_id]:
+            self.rooms[room_id].remove(client_id)
+            
+        logging.info(f"Client {client_id} disconnected from room {room_id}")
+    
+    async def send_to_client(self, message: dict, client_id: str):
+        if client_id in self.connections:
+            try:
+                await self.connections[client_id].send_json(message)
+            except Exception as e:
+                logging.error(f"Failed to send message to {client_id}: {e}")
+                
+    async def broadcast_to_room(self, message: dict, room_id: str, sender_id: str = None):
+        if room_id in self.rooms:
+            for client_id in self.rooms[room_id]:
+                if client_id != sender_id and client_id in self.connections:
+                    await self.send_to_client(message, client_id)
 
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+signaling_manager = SignalingManager()
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+# Models
+class DetectionRequest(BaseModel):
+    image_data: str  # base64 encoded image
+    confidence_threshold: float = 0.5
+    max_detections: int = 100
 
-# Add your routes to the router instead of directly to app
+class BoundingBox(BaseModel):
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+    width: float
+    height: float
+
+class Detection(BaseModel):
+    class_id: int
+    class_name: str
+    confidence: float
+    bbox: BoundingBox
+
+class DetectionResponse(BaseModel):
+    frame_id: str
+    capture_ts: float
+    recv_ts: float
+    inference_ts: float
+    detections: List[Detection]
+
+class MetricsData(BaseModel):
+    e2e_latency_median: float
+    e2e_latency_p95: float
+    server_latency_median: float
+    network_latency_median: float
+    processed_fps: float
+    bandwidth_kbps: float
+
+# COCO class names for MobileNet-SSD
+COCO_CLASSES = [
+    'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck',
+    'boat', 'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench',
+    'bird', 'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra',
+    'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+    'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove',
+    'skateboard', 'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup',
+    'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich', 'orange',
+    'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch',
+    'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse',
+    'remote', 'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink',
+    'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier',
+    'toothbrush'
+]
+
+# Mock object detection for now (will be replaced with actual ONNX model)
+def mock_object_detection(image_array: np.ndarray, confidence_threshold: float = 0.5) -> List[Detection]:
+    """Mock object detection that returns dummy detections"""
+    # Simulate processing time
+    time.sleep(0.05)  # 50ms inference time
+    
+    # Generate mock detections
+    detections = []
+    
+    # Mock detection for testing
+    if np.random.random() > 0.3:  # 70% chance of detection
+        mock_detection = Detection(
+            class_id=0,  # person
+            class_name="person",
+            confidence=0.85,
+            bbox=BoundingBox(
+                x1=50.0,
+                y1=30.0,
+                x2=200.0,
+                y2=250.0,
+                width=150.0,
+                height=220.0
+            )
+        )
+        detections.append(mock_detection)
+        
+    if np.random.random() > 0.7:  # 30% chance of second detection
+        mock_detection = Detection(
+            class_id=2,  # car
+            class_name="car", 
+            confidence=0.72,
+            bbox=BoundingBox(
+                x1=100.0,
+                y1=150.0,
+                x2=280.0,
+                y2=220.0,
+                width=180.0,
+                height=70.0
+            )
+        )
+        detections.append(mock_detection)
+    
+    return detections
+
+def preprocess_image(image_data: str) -> np.ndarray:
+    """Preprocess base64 encoded image for inference"""
+    try:
+        # Decode base64 image
+        image_bytes = base64.b64decode(image_data.split(',')[1] if ',' in image_data else image_data)
+        
+        # Load image
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        # Convert to RGB if necessary
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Resize to model input size (300x300 for MobileNet-SSD)
+        image = image.resize((300, 300), Image.LANCZOS)
+        
+        # Convert to numpy array
+        image_array = np.array(image).astype(np.float32)
+        
+        return image_array
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Image preprocessing failed: {str(e)}")
+
+# WebRTC Signaling WebSocket endpoint
+@app.websocket("/ws/{room_id}")
+async def websocket_endpoint(websocket: WebSocket, room_id: str):
+    client_id = str(uuid.uuid4())
+    
+    try:
+        await signaling_manager.connect(websocket, client_id, room_id)
+        
+        while True:
+            data = await websocket.receive_json()
+            message_type = data.get("type")
+            
+            if message_type in ["offer", "answer", "ice_candidate"]:
+                # Forward WebRTC signaling messages
+                target_id = data.get("target_id")
+                message = {
+                    "type": message_type,
+                    "data": data.get("data"),
+                    "sender_id": client_id,
+                    "timestamp": time.time()
+                }
+                
+                if target_id:
+                    await signaling_manager.send_to_client(message, target_id)
+                else:
+                    await signaling_manager.broadcast_to_room(message, room_id, client_id)
+                    
+            elif message_type == "get_room_users":
+                users = signaling_manager.rooms.get(room_id, [])
+                await signaling_manager.send_to_client({
+                    "type": "room_users",
+                    "users": users,
+                    "room_id": room_id
+                }, client_id)
+                
+            elif message_type == "detection_frame":
+                # Handle frame for object detection
+                frame_data = data.get("frame_data")
+                capture_ts = data.get("capture_ts", time.time())
+                recv_ts = time.time()
+                
+                if frame_data:
+                    try:
+                        # Process detection
+                        image_array = preprocess_image(frame_data)
+                        
+                        inference_start = time.time()
+                        detections = mock_object_detection(image_array, 0.5)
+                        inference_ts = time.time()
+                        
+                        # Send detection results back
+                        response = {
+                            "type": "detection_result",
+                            "frame_id": data.get("frame_id", str(uuid.uuid4())),
+                            "capture_ts": capture_ts,
+                            "recv_ts": recv_ts,
+                            "inference_ts": inference_ts,
+                            "detections": [det.dict() for det in detections]
+                        }
+                        
+                        await signaling_manager.send_to_client(response, client_id)
+                        
+                    except Exception as e:
+                        await signaling_manager.send_to_client({
+                            "type": "detection_error",
+                            "error": str(e),
+                            "frame_id": data.get("frame_id")
+                        }, client_id)
+                        
+    except WebSocketDisconnect:
+        signaling_manager.disconnect(client_id, room_id)
+        await signaling_manager.broadcast_to_room({
+            "type": "user_left",
+            "client_id": client_id,
+            "timestamp": time.time()
+        }, room_id, client_id)
+    except Exception as e:
+        logging.error(f"WebSocket error for client {client_id}: {e}")
+        signaling_manager.disconnect(client_id, room_id)
+
+# API Routes
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "WebRTC Multi-Object Detection System"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
+@api_router.post("/detect", response_model=DetectionResponse)
+async def detect_objects(request: DetectionRequest):
+    """Object detection API endpoint"""
+    recv_ts = time.time()
+    frame_id = str(uuid.uuid4())
+    
+    try:
+        # Preprocess image
+        image_array = preprocess_image(request.image_data)
+        
+        # Run inference
+        inference_start = time.time()
+        detections = mock_object_detection(image_array, request.confidence_threshold)
+        inference_ts = time.time()
+        
+        response = DetectionResponse(
+            frame_id=frame_id,
+            capture_ts=recv_ts,  # Will be overridden with actual capture time
+            recv_ts=recv_ts,
+            inference_ts=inference_ts,
+            detections=detections[:request.max_detections]
+        )
+        
+        return response
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Detection failed: {str(e)}")
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+@api_router.get("/rooms/{room_id}/users")
+async def get_room_users(room_id: str):
+    """Get list of users in a room"""
+    users = signaling_manager.rooms.get(room_id, [])
+    return {"room_id": room_id, "users": users, "count": len(users)}
 
-# Include the router in the main app
+@api_router.post("/metrics")
+async def save_metrics(metrics: MetricsData):
+    """Save performance metrics"""
+    metrics_doc = {
+        "timestamp": datetime.utcnow(),
+        "metrics": metrics.dict()
+    }
+    
+    await db.metrics.insert_one(metrics_doc)
+    return {"status": "saved", "timestamp": metrics_doc["timestamp"]}
+
+@api_router.get("/metrics/latest")
+async def get_latest_metrics():
+    """Get latest performance metrics"""
+    latest_metrics = await db.metrics.find_one(
+        sort=[("timestamp", -1)]
+    )
+    
+    if latest_metrics:
+        return latest_metrics["metrics"]
+    else:
+        return {"message": "No metrics available"}
+
+# Include router
 app.include_router(api_router)
 
 app.add_middleware(
