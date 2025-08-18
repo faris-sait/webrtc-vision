@@ -6,10 +6,8 @@ import wasmDetector from './utils/wasmDetection';
 import FrameQueue from './utils/frameQueue';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-// Temporary tunnel URL for testing WebSocket functionality
-const TUNNEL_URL = 'https://732980370df48a.lhr.life';
-const WS_URL = TUNNEL_URL.replace('https:', 'wss:').replace('http:', 'ws:');
-const API_URL = TUNNEL_URL;
+const WS_URL = BACKEND_URL.replace('https:', 'wss:').replace('http:', 'ws:');
+const API_URL = BACKEND_URL;
 
 const WebRTCDetectionApp = () => {
   // State management
