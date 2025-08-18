@@ -252,15 +252,15 @@ const WebRTCDetectionApp = () => {
       };
 
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        console.log('Falling back to HTTP signaling...');
+        console.error('❌ WebSocket error:', error);
+        console.log('🔄 Falling back to HTTP signaling...');
         initHTTPSignaling(roomId);
       };
 
       ws.onclose = () => {
-        console.log('WebSocket disconnected');
+        console.log('🚪 WebSocket disconnected');
         if (!signalingRef.current || signalingRef.current === wsWrapper) {
-          console.log('Falling back to HTTP signaling...');
+          console.log('🔄 Falling back to HTTP signaling...');
           initHTTPSignaling(roomId);
         }
       };
@@ -268,7 +268,7 @@ const WebRTCDetectionApp = () => {
       // Set timeout for WebSocket connection
       setTimeout(() => {
         if (ws.readyState !== WebSocket.OPEN) {
-          console.log('WebSocket timeout, falling back to HTTP signaling...');
+          console.log('⏰ WebSocket timeout, falling back to HTTP signaling...');
           ws.close();
           initHTTPSignaling(roomId);
         }
