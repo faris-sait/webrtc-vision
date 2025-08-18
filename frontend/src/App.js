@@ -582,9 +582,26 @@ const WebRTCDetectionApp = () => {
     setIsRecording(false);
     setCurrentView('home');
     
+    // Stop frame processing loop
+    if (processLoopRef.current) {
+      clearTimeout(processLoopRef.current);
+      processLoopRef.current = null;
+    }
+    
+    // Clear frame queue
+    if (frameQueueRef.current) {
+      frameQueueRef.current.clear();
+    }
+    
+    // Clear pending detections
+    if (window.pendingDetections) {
+      window.pendingDetections = {};
+    }
+    
     // Stop local stream
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
     }
     
     // Close peer connection
@@ -592,6 +609,10 @@ const WebRTCDetectionApp = () => {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
+    
+    // Reset metrics
+    setMetrics({ fps: 0, latency: 0, detectionCount: 0, bandwidth: 0 });
+    setDetections([]);
   };
 
   // Render different views
