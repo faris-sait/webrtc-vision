@@ -521,11 +521,26 @@ const WebRTCDetectionApp = () => {
 
   const handleAnswer = async (message) => {
     try {
-      await peerConnectionRef.current?.setRemoteDescription(
+      console.log('🎯 DEBUG: Handling answer from', message.sender_id);
+      console.log('🎯 DEBUG: Answer SDP:', message.data);
+      console.log('🎯 DEBUG: Peer connection state before setRemoteDescription:', peerConnectionRef.current?.connectionState);
+      console.log('🎯 DEBUG: Signaling state before setRemoteDescription:', peerConnectionRef.current?.signalingState);
+
+      if (!peerConnectionRef.current) {
+        console.error('❌ No peer connection available when handling answer');
+        throw new Error('Peer connection not available');
+      }
+
+      await peerConnectionRef.current.setRemoteDescription(
         new RTCSessionDescription(message.data)
       );
+      console.log('🎯 DEBUG: Answer set as remote description successfully');
+      console.log('🎯 DEBUG: Signaling state after setRemoteDescription:', peerConnectionRef.current.signalingState);
+      console.log('🎯 DEBUG: Connection state after setRemoteDescription:', peerConnectionRef.current.connectionState);
     } catch (error) {
-      console.error('Error handling answer:', error);
+      console.error('❌ Error handling answer:', error);
+      console.error('❌ Error details:', error.message, error.stack);
+      setErrors(prev => [...prev, { timestamp: Date.now(), error: `Failed to handle WebRTC answer: ${error.message}` }]);
     }
   };
 
