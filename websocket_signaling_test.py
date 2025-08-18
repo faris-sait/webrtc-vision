@@ -307,7 +307,7 @@ class WebSocketSignalingTester:
             test_room_id = f"test_room_{uuid.uuid4().hex[:8]}"
             ws_url = f"{WS_LOCAL}/ws/{test_room_id}"
             
-            async with websockets.connect(ws_url, timeout=5) as websocket:
+            async with websockets.connect(ws_url) as websocket:
                 logger.info("✓ WebSocket connected for detection frame test")
                 
                 # Create test image
