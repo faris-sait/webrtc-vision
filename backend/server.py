@@ -526,6 +526,85 @@ async def get_latest_metrics():
     else:
         return {"message": "No metrics available"}
 
+# HTTP-based signaling endpoints (fallback for WebSocket issues)
+class SignalingMessage(BaseModel):
+    type: str
+    data: Optional[Dict[str, Any]] = None
+    target_id: Optional[str] = None
+    
+class JoinRoomRequest(BaseModel):
+    client_id: str
+
+@api_router.post("/signaling/{room_id}/join")
+async def join_room_http(room_id: str, request: JoinRoomRequest):
+    """Join room for HTTP-based signaling"""
+    try:
+        http_signaling_manager.join_room(request.client_id, room_id)
+        users = http_signaling_manager.get_room_users(room_id)
+        return {
+            "status": "joined",
+            "room_id": room_id,
+            "client_id": request.client_id,
+            "users": users
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/signaling/{room_id}/leave")
+async def leave_room_http(room_id: str, request: JoinRoomRequest):
+    """Leave room for HTTP-based signaling"""
+    try:
+        http_signaling_manager.leave_room(request.client_id)
+        return {"status": "left", "room_id": room_id, "client_id": request.client_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/signaling/{room_id}/message")
+async def send_signaling_message(room_id: str, message: SignalingMessage, client_id: str = None):
+    """Send WebRTC signaling message via HTTP"""
+    try:
+        message_data = {
+            "type": message.type,
+            "data": message.data,
+            "sender_id": client_id,
+            "timestamp": time.time()
+        }
+        
+        if message.target_id:
+            # Send to specific client
+            http_signaling_manager.send_message(message_data, message.target_id)
+        else:
+            # Broadcast to room
+            http_signaling_manager.broadcast_to_room(message_data, room_id, client_id)
+            
+        return {"status": "sent", "message_type": message.type}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/signaling/{room_id}/messages/{client_id}")
+async def get_signaling_messages(room_id: str, client_id: str):
+    """Poll for signaling messages (HTTP long polling)"""
+    try:
+        messages = http_signaling_manager.get_messages(client_id)
+        return {
+            "messages": messages,
+            "client_id": client_id,
+            "room_id": room_id,
+            "count": len(messages)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/signaling/{room_id}/users")
+async def get_room_users_http(room_id: str):
+    """Get users in room via HTTP signaling"""
+    try:
+        users = http_signaling_manager.get_room_users(room_id)
+        return {"room_id": room_id, "users": users, "count": len(users)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Include router
 app.include_router(api_router)
 
