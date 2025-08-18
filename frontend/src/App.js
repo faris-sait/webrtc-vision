@@ -49,6 +49,98 @@ const WebRTCDetectionApp = () => {
     }
   });
 
+  // HTTP Signaling fallback class
+  class HTTPSignaling {
+    constructor(roomId, clientId, onMessage, onStatusChange) {
+      this.roomId = roomId;
+      this.clientId = clientId;
+      this.onMessage = onMessage;
+      this.onStatusChange = onStatusChange;
+      this.polling = false;
+      this.pollInterval = null;
+      this.connected = false;
+    }
+
+    async connect() {
+      try {
+        // Join room
+        const response = await fetch(`${API_URL}/api/signaling/${this.roomId}/join`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_id: this.clientId })
+        });
+        
+        if (response.ok) {
+          this.connected = true;
+          this.onStatusChange('connected');
+          this.startPolling();
+          console.log('HTTP Signaling connected');
+          return true;
+        }
+      } catch (error) {
+        console.error('HTTP Signaling connection failed:', error);
+        this.onStatusChange('error');
+        return false;
+      }
+      return false;
+    }
+
+    startPolling() {
+      if (this.polling) return;
+      
+      this.polling = true;
+      this.pollInterval = setInterval(async () => {
+        try {
+          const response = await fetch(`${API_URL}/api/signaling/${this.roomId}/messages/${this.clientId}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.messages && data.messages.length > 0) {
+              data.messages.forEach(message => this.onMessage(message));
+            }
+          }
+        } catch (error) {
+          console.error('HTTP Signaling polling error:', error);
+        }
+      }, 1000); // Poll every second
+    }
+
+    async send(message) {
+      try {
+        const response = await fetch(`${API_URL}/api/signaling/${this.roomId}/message?client_id=${this.clientId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(message)
+        });
+        return response.ok;
+      } catch (error) {
+        console.error('HTTP Signaling send error:', error);
+        return false;
+      }
+    }
+
+    close() {
+      this.polling = false;
+      if (this.pollInterval) {
+        clearInterval(this.pollInterval);
+      }
+      this.connected = false;
+      this.onStatusChange('disconnected');
+      
+      // Leave room
+      if (this.clientId && this.roomId) {
+        fetch(`${API_URL}/api/signaling/${this.roomId}/leave`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ client_id: this.clientId })
+        }).catch(err => console.error('Error leaving room:', err));
+      }
+    }
+  }
+
+  // Unified signaling interface
+  const signalingRef = useRef(null);
+  const clientIdRef = useRef(null);
+
   const generateRoomId = () => {
     const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     setRoomId(newRoomId);
