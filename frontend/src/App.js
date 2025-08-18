@@ -331,6 +331,7 @@ const WebRTCDetectionApp = () => {
     }
 
     const wsUrl = `${WS_URL}/ws/${roomId}`;
+    console.log('🔌 DEBUG: Legacy WebSocket URL:', wsUrl);
     wsRef.current = new WebSocket(wsUrl);
 
     wsRef.current.onopen = () => {
