@@ -260,15 +260,18 @@
           
   - task: "Start Scripts & Ngrok"
     implemented: true
-    working: true
+    working: "NA"
     file: "start.sh"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Comprehensive start script with ngrok support, mode switching, service management"
+        - working: "NA"
+          agent: "testing"
+          comment: "⚠️ NOT TESTED - Infrastructure scripts not tested due to system limitations. Focus on core WebRTC functionality issues."
           
   - task: "Benchmarking System"
     implemented: true
