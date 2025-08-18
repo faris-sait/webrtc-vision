@@ -461,6 +461,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the application on startup"""
+    logger.info("Starting WebRTC Multi-Object Detection System...")
+    
+    # Load ONNX model
+    model_loaded = load_onnx_model()
+    if model_loaded:
+        logger.info("✓ ONNX model loaded successfully")
+    else:
+        logger.warning("⚠ ONNX model loading failed, using mock detection")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
