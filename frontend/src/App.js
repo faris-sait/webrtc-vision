@@ -225,9 +225,10 @@ const WebRTCDetectionApp = () => {
     }
 
     // Try WebSocket first
-    console.log('Attempting WebSocket connection...');
+    console.log('🔌 DEBUG: Attempting WebSocket connection...');
     try {
       const wsUrl = `${WS_URL}/ws/${roomId}`;
+      console.log('🔌 DEBUG: Constructed wsUrl:', wsUrl);
       const ws = new WebSocket(wsUrl);
       
       // Create WebSocket wrapper
