@@ -98,7 +98,7 @@ class WebSocketSignalingTester:
             external_ws_url = f"{WS_EXTERNAL}/ws/{test_room_id}"
             
             # Try to connect externally
-            async with websockets.connect(external_ws_url, timeout=10) as websocket:
+            async with websockets.connect(external_ws_url) as websocket:
                 logger.info(f"✓ EXTERNAL WebSocket connected successfully to {external_ws_url}")
                 
                 # Test basic message exchange
