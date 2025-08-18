@@ -423,10 +423,38 @@ const WebRTCDetectionApp = () => {
     };
 
     peerConnection.ontrack = (event) => {
-      console.log('Received remote track');
+      console.log('🎥 DEBUG: Received remote track event', event);
+      console.log('🎥 DEBUG: Track kind:', event.track?.kind);
+      console.log('🎥 DEBUG: Track enabled:', event.track?.enabled);
+      console.log('🎥 DEBUG: Track readyState:', event.track?.readyState);
+      console.log('🎥 DEBUG: Event streams:', event.streams);
+      console.log('🎥 DEBUG: Stream tracks:', event.streams[0]?.getTracks());
+      
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
+        console.log('🎥 DEBUG: Set video srcObject to stream');
+        
+        // Add video event listeners for debugging
+        const video = remoteVideoRef.current;
+        video.onloadedmetadata = () => {
+          console.log('🎥 DEBUG: Video metadata loaded', {
+            videoWidth: video.videoWidth,
+            videoHeight: video.videoHeight,
+            duration: video.duration
+          });
+        };
+        
+        video.oncanplay = () => {
+          console.log('🎥 DEBUG: Video can play');
+        };
+        
+        video.onplay = () => {
+          console.log('🎥 DEBUG: Video started playing');
+        };
+        
         startObjectDetection(event.streams[0]);
+      } else {
+        console.error('🎥 ERROR: remoteVideoRef.current is null');
       }
     };
 
