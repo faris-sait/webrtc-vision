@@ -185,8 +185,8 @@ class WebSocketSignalingTester:
             ws_url = f"{WS_LOCAL}/ws/{test_room_id}"
             
             # Create two connections to simulate peer-to-peer signaling
-            async with websockets.connect(ws_url, timeout=5) as ws1, \
-                       websockets.connect(ws_url, timeout=5) as ws2:
+            async with websockets.connect(ws_url) as ws1, \
+                       websockets.connect(ws_url) as ws2:
                 
                 logger.info("✓ Two WebSocket connections established for signaling test")
                 
