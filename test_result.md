@@ -218,15 +218,18 @@
           
   - task: "WASM Mode Implementation"
     implemented: true
-    working: true
+    working: false
     file: "App.js, utils/wasmDetection.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "WASM mode implemented with onnxruntime-web, client-side inference, frame queue management"
+        - working: false
+          agent: "testing"
+          comment: "❌ DEPENDENT ON WEBRTC VIDEO STREAMING - WASM detection mode cannot function because video streaming is not working. No video frames available for client-side inference processing. WASM detection implementation appears correct but blocked by WebRTC video track reception failure."
           
   - task: "Frame Queue & Backpressure"
     implemented: true
