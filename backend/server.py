@@ -83,6 +83,89 @@ class SignalingManager:
 
 signaling_manager = SignalingManager()
 
+# HTTP-based signaling fallback for WebSocket issues
+class HTTPSignalingManager:
+    def __init__(self):
+        self.message_queues: Dict[str, List[dict]] = {}  # client_id -> messages
+        self.client_rooms: Dict[str, str] = {}  # client_id -> room_id
+        self.room_clients: Dict[str, List[str]] = {}  # room_id -> client_ids
+        
+    def join_room(self, client_id: str, room_id: str):
+        """Add client to room for HTTP signaling"""
+        self.client_rooms[client_id] = room_id
+        
+        if room_id not in self.room_clients:
+            self.room_clients[room_id] = []
+        
+        if client_id not in self.room_clients[room_id]:
+            self.room_clients[room_id].append(client_id)
+            
+        if client_id not in self.message_queues:
+            self.message_queues[client_id] = []
+            
+        # Notify others in room
+        self.broadcast_to_room({
+            "type": "user_joined",
+            "client_id": client_id,
+            "timestamp": time.time()
+        }, room_id, client_id)
+        
+        logging.info(f"HTTP Signaling: Client {client_id} joined room {room_id}")
+        
+    def leave_room(self, client_id: str):
+        """Remove client from room"""
+        room_id = self.client_rooms.get(client_id)
+        if room_id:
+            # Notify others
+            self.broadcast_to_room({
+                "type": "user_left", 
+                "client_id": client_id,
+                "timestamp": time.time()
+            }, room_id, client_id)
+            
+            # Clean up
+            if room_id in self.room_clients and client_id in self.room_clients[room_id]:
+                self.room_clients[room_id].remove(client_id)
+                
+            if client_id in self.client_rooms:
+                del self.client_rooms[client_id]
+                
+            if client_id in self.message_queues:
+                del self.message_queues[client_id]
+                
+        logging.info(f"HTTP Signaling: Client {client_id} left room {room_id}")
+    
+    def send_message(self, message: dict, target_client_id: str):
+        """Send message to specific client"""
+        if target_client_id not in self.message_queues:
+            self.message_queues[target_client_id] = []
+            
+        self.message_queues[target_client_id].append({
+            **message,
+            "timestamp": time.time()
+        })
+        
+    def broadcast_to_room(self, message: dict, room_id: str, sender_id: str = None):
+        """Broadcast message to all clients in room except sender"""
+        if room_id in self.room_clients:
+            for client_id in self.room_clients[room_id]:
+                if client_id != sender_id:
+                    self.send_message(message, client_id)
+    
+    def get_messages(self, client_id: str) -> List[dict]:
+        """Get and clear pending messages for client"""
+        if client_id in self.message_queues:
+            messages = self.message_queues[client_id].copy()
+            self.message_queues[client_id].clear()
+            return messages
+        return []
+        
+    def get_room_users(self, room_id: str) -> List[str]:
+        """Get list of users in room"""
+        return self.room_clients.get(room_id, [])
+
+http_signaling_manager = HTTPSignalingManager()
+
 # Models
 class DetectionRequest(BaseModel):
     image_data: str  # base64 encoded image
