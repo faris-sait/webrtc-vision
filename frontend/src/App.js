@@ -62,7 +62,7 @@ const WebRTCDetectionApp = () => {
       wsRef.current.close();
     }
 
-    const wsUrl = `${WS_URL}/ws/${roomId}`;
+    const wsUrl = `${WS_URL}/api/ws/${roomId}`;
     wsRef.current = new WebSocket(wsUrl);
 
     wsRef.current.onopen = () => {
