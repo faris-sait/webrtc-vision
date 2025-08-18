@@ -348,7 +348,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
                         image_array = preprocess_image(frame_data)
                         
                         inference_start = time.time()
-                        detections = mock_object_detection(image_array, 0.5)
+                        detections = run_object_detection(image_array, 0.5)
                         inference_ts = time.time()
                         
                         # Send detection results back
