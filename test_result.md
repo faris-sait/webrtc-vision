@@ -118,11 +118,11 @@
 ## backend:
   - task: "WebRTC Signaling WebSocket"
     implemented: true
-    working: true
+    working: false
     file: "server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: true
           agent: "main"
@@ -130,6 +130,9 @@
         - working: true
           agent: "testing"
           comment: "✓ BACKEND WEBSOCKET IMPLEMENTATION VERIFIED - WebSocket endpoint exists at /ws/{room_id}, signaling manager implemented with room management, detection frame processing, offer/answer/ice candidate handling. External WebSocket connectivity limited by infrastructure but core functionality confirmed through code review and API testing."
+        - working: false
+          agent: "main"
+          comment: "DEBUGGING WEBSOCKET ISSUE: User reports WebRTC connection failing between phone and browser with both showing 'disconnected'. Investigation shows WebSocket connections not reaching backend through Kubernetes ingress. Ingress returns HTTP/2 200 with HTML instead of HTTP/1.1 101 Switching Protocols for WebSocket upgrade requests. Backend WebSocket endpoint works locally but fails through external ingress. Root cause: Kubernetes ingress not configured for WebSocket support."
           
   - task: "ONNX Object Detection Server Mode"
     implemented: true
