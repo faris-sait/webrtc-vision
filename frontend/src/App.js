@@ -488,8 +488,26 @@ const WebRTCDetectionApp = () => {
     };
 
     peerConnection.onconnectionstatechange = () => {
-      console.log('Connection state:', peerConnection.connectionState);
-      setConnectionStatus(peerConnection.connectionState);
+      const state = peerConnection.connectionState;
+      console.log('🔗 Connection state changed:', state);
+      setConnectionStatus(state);
+      
+      // Log detailed state information
+      console.log('🔗 ICE connection state:', peerConnection.iceConnectionState);
+      console.log('🔗 ICE gathering state:', peerConnection.iceGatheringState);
+      console.log('🔗 Signaling state:', peerConnection.signalingState);
+    };
+
+    peerConnection.oniceconnectionstatechange = () => {
+      console.log('🧊 ICE connection state changed:', peerConnection.iceConnectionState);
+    };
+
+    peerConnection.onicegatheringstatechange = () => {
+      console.log('🧊 ICE gathering state changed:', peerConnection.iceGatheringState);
+    };
+
+    peerConnection.onsignalingstatechange = () => {
+      console.log('📡 Signaling state changed:', peerConnection.signalingState);
     };
 
     return peerConnection;
