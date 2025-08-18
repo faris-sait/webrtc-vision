@@ -149,7 +149,160 @@ const WebRTCDetectionApp = () => {
 
   const qrCodeUrl = roomId ? `${window.location.origin}?room=${roomId}&mode=phone` : '';
 
-  // WebSocket connection
+  // Message handling for both WebSocket and HTTP signaling
+  const handleSignalingMessage = async (message) => {
+    console.log('Signaling message:', message);
+
+    switch (message.type) {
+      case 'user_joined':
+        console.log(`User ${message.client_id} joined`);
+        break;
+
+      case 'user_left':
+        console.log(`User ${message.client_id} left`);
+        break;
+
+      case 'offer':
+        await handleOffer(message);
+        break;
+
+      case 'answer':
+        await handleAnswer(message);
+        break;
+
+      case 'ice_candidate':
+        await handleIceCandidate(message);
+        break;
+
+      case 'detection_result':
+        // Handle server detection result
+        if (window.pendingDetections && window.pendingDetections[message.frame_id]) {
+          window.pendingDetections[message.frame_id](message);
+          delete window.pendingDetections[message.frame_id];
+        } else {
+          // Fallback for direct handling
+          handleDetectionResult(message);
+        }
+        break;
+
+      case 'detection_error':
+        setErrors(prev => [...prev, { timestamp: Date.now(), error: message.error }]);
+        break;
+
+      case 'room_users':
+        console.log('Room users:', message.users);
+        break;
+    }
+  };
+
+  // Unified signaling connection (WebSocket + HTTP fallback)
+  const connectSignaling = useCallback(async (roomId) => {
+    // Close existing connection
+    if (signalingRef.current) {
+      signalingRef.current.close();
+      signalingRef.current = null;
+    }
+
+    // Generate client ID
+    if (!clientIdRef.current) {
+      clientIdRef.current = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    // Try WebSocket first
+    console.log('Attempting WebSocket connection...');
+    try {
+      const wsUrl = `${WS_URL}/ws/${roomId}`;
+      const ws = new WebSocket(wsUrl);
+      
+      // Create WebSocket wrapper
+      const wsWrapper = {
+        send: (message) => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(message));
+            return true;
+          }
+          return false;
+        },
+        close: () => {
+          ws.close();
+        }
+      };
+
+      ws.onopen = () => {
+        console.log('WebSocket connected successfully');
+        setConnectionStatus('connected');
+        signalingRef.current = wsWrapper;
+        
+        // Request room users
+        wsWrapper.send({ type: 'get_room_users' });
+      };
+
+      ws.onmessage = async (event) => {
+        const message = JSON.parse(event.data);
+        await handleSignalingMessage(message);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        console.log('Falling back to HTTP signaling...');
+        initHTTPSignaling(roomId);
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        if (!signalingRef.current || signalingRef.current === wsWrapper) {
+          console.log('Falling back to HTTP signaling...');
+          initHTTPSignaling(roomId);
+        }
+      };
+
+      // Set timeout for WebSocket connection
+      setTimeout(() => {
+        if (ws.readyState !== WebSocket.OPEN) {
+          console.log('WebSocket timeout, falling back to HTTP signaling...');
+          ws.close();
+          initHTTPSignaling(roomId);
+        }
+      }, 3000);
+
+    } catch (error) {
+      console.error('WebSocket connection failed:', error);
+      console.log('Falling back to HTTP signaling...');
+      initHTTPSignaling(roomId);
+    }
+  }, []);
+
+  // Initialize HTTP signaling fallback
+  const initHTTPSignaling = async (roomId) => {
+    console.log('Initializing HTTP signaling fallback...');
+    
+    const httpSignaling = new HTTPSignaling(
+      roomId,
+      clientIdRef.current,
+      handleSignalingMessage,
+      setConnectionStatus
+    );
+
+    const connected = await httpSignaling.connect();
+    if (connected) {
+      signalingRef.current = httpSignaling;
+      console.log('HTTP signaling fallback connected');
+    } else {
+      setConnectionStatus('error');
+      setErrors(prev => [...prev, { timestamp: Date.now(), error: 'All signaling methods failed' }]);
+    }
+  };
+
+  // Send signaling message through current connection
+  const sendSignalingMessage = (message) => {
+    if (signalingRef.current && signalingRef.current.send) {
+      return signalingRef.current.send(message);
+    }
+    console.error('No signaling connection available');
+    return false;
+  };
+
+  // WebSocket connection (legacy - now replaced by unified signaling)
   const connectWebSocket = useCallback((roomId) => {
     if (wsRef.current) {
       wsRef.current.close();
