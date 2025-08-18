@@ -99,7 +99,14 @@ const WebRTCDetectionApp = () => {
           break;
 
         case 'detection_result':
-          handleDetectionResult(message);
+          // Handle server detection result
+          if (window.pendingDetections && window.pendingDetections[message.frame_id]) {
+            window.pendingDetections[message.frame_id](message);
+            delete window.pendingDetections[message.frame_id];
+          } else {
+            // Fallback for direct handling
+            handleDetectionResult(message);
+          }
           break;
 
         case 'detection_error':
