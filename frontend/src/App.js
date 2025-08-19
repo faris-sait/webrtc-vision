@@ -931,17 +931,23 @@ const WebRTCDetectionApp = () => {
         });
         console.log('📱✅ Real camera access successful');
       } catch (cameraError) {
-        console.warn('📱⚠️ Camera access failed:', cameraError.message);
+        console.warn('📱⚠️ Camera access failed:', cameraError.name, cameraError.message);
         console.log('📱🎬 Falling back to mock video stream for testing...');
         
-        // Create mock video stream for testing
-        stream = createMockVideoStream();
-        
-        // Add user feedback about mock stream
-        setErrors(prev => [...prev, { 
-          timestamp: Date.now(), 
-          error: 'Using mock video stream - real camera not available in testing environment' 
-        }]);
+        try {
+          // Create mock video stream for testing
+          stream = createMockVideoStream();
+          console.log('📱✅ Mock video stream created successfully as fallback');
+          
+          // Add user feedback about mock stream
+          setErrors(prev => [...prev, { 
+            timestamp: Date.now(), 
+            error: 'Using mock video stream - real camera not available in testing environment' 
+          }]);
+        } catch (mockError) {
+          console.error('📱❌ CRITICAL: Mock video stream creation failed:', mockError);
+          throw new Error(`Both real camera and mock stream failed: ${cameraError.message} | ${mockError.message}`);
+        }
       }
 
       if (localVideoRef.current) {
