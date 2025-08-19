@@ -1537,11 +1537,16 @@ const WebRTCDetectionApp = () => {
   );
 
   // Main render logic
+  console.log('🎬 RENDERING - currentView:', currentView, 'mode:', mode, 'roomId:', roomId);
+  
   if (currentView === 'phone') {
+    console.log('📱 Rendering phone view');
     return renderPhoneView();
   } else if (currentView === 'browser') {
+    console.log('🖥️ Rendering browser view');
     return renderBrowserView();
   } else {
+    console.log('🏠 Rendering home view');
     return renderHomeView();
   }
 };
