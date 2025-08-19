@@ -1424,21 +1424,43 @@ const WebRTCDetectionApp = () => {
         </div>
 
         <div className="space-y-4">
-          <button
-            onClick={startLocalCamera}
-            className="w-full bg-purple-600 hover:bg-purple-700 py-3 rounded-lg font-semibold transition-colors"
-          >
-            <Camera className="w-5 h-5 inline mr-2" />
-            Start Camera
-          </button>
-
           <div className={`p-4 rounded-lg text-center ${
             connectionStatus === 'connected' ? 'bg-green-900/20 border border-green-500/30' :
+            connectionStatus === 'disconnected' ? 'bg-red-900/20 border border-red-500/30' :
             'bg-yellow-900/20 border border-yellow-500/30'
           }`}>
             <div className="font-semibold">Connection Status</div>
             <div className="text-sm opacity-75">{connectionStatus}</div>
           </div>
+
+          <div className="p-3 bg-slate-800 rounded-lg text-center text-sm">
+            <div className="font-semibold text-blue-400 mb-1">Camera Status</div>
+            <div className="text-gray-300">
+              {localStreamRef.current ? 
+                (localStreamRef.current.getVideoTracks().length > 0 ? 
+                  '✅ Camera Active' : '❌ No Video Track') : 
+                '🔄 Initializing...'}
+            </div>
+          </div>
+
+          <button
+            onClick={startLocalCamera}
+            className="w-full bg-purple-600 hover:bg-purple-700 py-3 rounded-lg font-semibold transition-colors"
+          >
+            <Camera className="w-5 h-5 inline mr-2" />
+            Restart Camera
+          </button>
+
+          {errors.length > 0 && (
+            <div className="p-3 bg-orange-900/20 border border-orange-500/30 rounded-lg">
+              <div className="font-semibold text-orange-400 text-sm mb-1">Status Messages</div>
+              <div className="text-xs text-gray-300 space-y-1">
+                {errors.slice(-3).map((error, idx) => (
+                  <div key={idx}>{error.error}</div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
