@@ -846,43 +846,71 @@ const WebRTCDetectionApp = () => {
   const createMockVideoStream = () => {
     console.log('🎬 Creating mock video stream for testing environment');
     
-    // Create a canvas element to generate mock video
-    const canvas = document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 480;
-    const ctx = canvas.getContext('2d');
-    
-    // Draw a simple moving pattern
-    let frame = 0;
-    const animate = () => {
-      // Clear canvas
-      ctx.fillStyle = '#2563eb';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    try {
+      // Create a canvas element to generate mock video
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 480;
+      const ctx = canvas.getContext('2d');
       
-      // Draw moving circle
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      const x = (Math.sin(frame * 0.02) + 1) * (canvas.width / 2);
-      const y = (Math.cos(frame * 0.03) + 1) * (canvas.height / 2);
-      ctx.arc(x, y, 50, 0, 2 * Math.PI);
-      ctx.fill();
+      if (!ctx) {
+        throw new Error('Failed to get canvas 2D context');
+      }
       
-      // Draw frame counter
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '24px Arial';
-      ctx.fillText(`Mock Video - Frame ${frame}`, 20, 40);
+      // Draw a simple moving pattern
+      let frame = 0;
+      const animate = () => {
+        try {
+          // Clear canvas
+          ctx.fillStyle = '#2563eb';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Draw moving circle
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          const x = (Math.sin(frame * 0.02) + 1) * (canvas.width / 2);
+          const y = (Math.cos(frame * 0.03) + 1) * (canvas.height / 2);
+          ctx.arc(x, y, 50, 0, 2 * Math.PI);
+          ctx.fill();
+          
+          // Draw frame counter
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '24px Arial';
+          ctx.fillText(`Mock Video - Frame ${frame}`, 20, 40);
+          
+          // Draw testing indicator
+          ctx.fillStyle = '#ff6b6b';
+          ctx.font = '16px Arial';
+          ctx.fillText('Testing Mode - Mock Camera', 20, canvas.height - 30);
+          
+          frame++;
+          
+          // Continue animation
+          requestAnimationFrame(animate);
+        } catch (animError) {
+          console.error('🎬 Animation error:', animError);
+        }
+      };
       
-      frame++;
-      requestAnimationFrame(animate);
-    };
-    animate();
-    
-    // Create video stream from canvas
-    const stream = canvas.captureStream(30); // 30 FPS
-    console.log('🎬 Mock video stream created:', stream);
-    console.log('🎬 Mock stream tracks:', stream.getTracks());
-    
-    return stream;
+      // Start animation
+      animate();
+      
+      // Create video stream from canvas
+      const stream = canvas.captureStream(30); // 30 FPS
+      console.log('🎬 ✅ Mock video stream created successfully:', stream);
+      console.log('🎬 Mock stream tracks count:', stream.getTracks().length);
+      console.log('🎬 Mock stream video tracks:', stream.getVideoTracks().length);
+      
+      // Verify stream has video tracks
+      if (stream.getVideoTracks().length === 0) {
+        throw new Error('Mock stream has no video tracks');
+      }
+      
+      return stream;
+    } catch (error) {
+      console.error('🎬 ❌ Error creating mock video stream:', error);
+      throw error;
+    }
   };
 
   // Start local camera (for phone interface)
