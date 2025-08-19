@@ -20,6 +20,7 @@ const WebRTCDetectionApp = () => {
   // State management
   const [currentView, setCurrentView] = useState('home');
   const [roomId, setRoomId] = useState('');
+  const [mode, setMode] = useState(''); // 'phone' or 'browser' or ''
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [detectionMode, setDetectionMode] = useState('server'); // 'server' or 'wasm'
   const [isRecording, setIsRecording] = useState(false);
