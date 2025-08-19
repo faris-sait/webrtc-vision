@@ -43,6 +43,7 @@ const WebRTCDetectionApp = () => {
   const metricsIntervalRef = useRef(null);
   const frameCountRef = useRef(0);
   const frameQueueRef = useRef(null);
+  const iceCandidateQueueRef = useRef([]);
   const processLoopRef = useRef(null);
 
   // Performance tracking
