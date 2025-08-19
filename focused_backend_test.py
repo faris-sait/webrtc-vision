@@ -16,7 +16,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-BACKEND_URL = "https://rtc-troubleshoot.preview.emergentagent.com"
+BACKEND_URL = "https://streamlink-2.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 class FocusedBackendTester:

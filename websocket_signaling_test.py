@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Test configuration
-BACKEND_URL = "https://rtc-troubleshoot.preview.emergentagent.com"
+BACKEND_URL = "https://streamlink-2.preview.emergentagent.com"
 LOCAL_BACKEND_URL = "http://localhost:8001"
 WS_EXTERNAL = BACKEND_URL.replace("https://", "wss://").replace("http://", "ws://")
 WS_LOCAL = LOCAL_BACKEND_URL.replace("https://", "wss://").replace("http://", "ws://")
