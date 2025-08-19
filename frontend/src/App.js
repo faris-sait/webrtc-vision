@@ -579,6 +579,9 @@ const WebRTCDetectionApp = () => {
         target_id: message.sender_id
       });
       console.log('🎯 DEBUG: Answer sent via signaling');
+      
+      // Process any queued ICE candidates now that remote description is set
+      await processQueuedIceCandidates();
     } catch (error) {
       console.error('❌ Error handling offer:', error);
       console.error('❌ Error details:', error.message, error.stack);
