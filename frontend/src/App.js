@@ -607,6 +607,9 @@ const WebRTCDetectionApp = () => {
       console.log('🎯 DEBUG: Answer set as remote description successfully');
       console.log('🎯 DEBUG: Signaling state after setRemoteDescription:', peerConnectionRef.current.signalingState);
       console.log('🎯 DEBUG: Connection state after setRemoteDescription:', peerConnectionRef.current.connectionState);
+      
+      // Process any queued ICE candidates now that remote description is set
+      await processQueuedIceCandidates();
     } catch (error) {
       console.error('❌ Error handling answer:', error);
       console.error('❌ Error details:', error.message, error.stack);
