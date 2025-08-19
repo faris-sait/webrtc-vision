@@ -548,6 +548,34 @@ const WebRTCDetectionApp = () => {
         peerConnectionRef.current = setupPeerConnection();
       }
 
+      // 🔧 SDP M-LINE ORDER FIX: Add receive-only transceivers BEFORE setting remote description
+      // This ensures the answer will have the same m-line order as the offer
+      console.log('🔧 M-LINE FIX: Adding receive-only transceivers to maintain SDP order');
+      
+      // Check if transceivers already exist to avoid duplicates
+      const existingTransceivers = peerConnectionRef.current.getTransceivers();
+      console.log('🔧 M-LINE FIX: Existing transceivers count:', existingTransceivers.length);
+      
+      if (existingTransceivers.length === 0) {
+        // Add video transceiver (receive-only) - this should match the offer's m-line order
+        const videoTransceiver = peerConnectionRef.current.addTransceiver('video', {
+          direction: 'recvonly'
+        });
+        console.log('🔧 M-LINE FIX: Added video receive-only transceiver:', videoTransceiver);
+        
+        // If the offer contains audio, add audio transceiver too
+        // We'll detect this from the SDP
+        const offerSdp = message.data.sdp;
+        if (offerSdp.includes('m=audio')) {
+          const audioTransceiver = peerConnectionRef.current.addTransceiver('audio', {
+            direction: 'recvonly'
+          });
+          console.log('🔧 M-LINE FIX: Added audio receive-only transceiver:', audioTransceiver);
+        }
+      } else {
+        console.log('🔧 M-LINE FIX: Transceivers already exist, skipping creation');
+      }
+
       // Log current peer connection state
       console.log('🎯 DEBUG: Peer connection state before setRemoteDescription:', peerConnectionRef.current.connectionState);
       console.log('🎯 DEBUG: Signaling state before setRemoteDescription:', peerConnectionRef.current.signalingState);
@@ -562,10 +590,11 @@ const WebRTCDetectionApp = () => {
       // Log state after setting remote description
       console.log('🎯 DEBUG: Signaling state after setRemoteDescription:', peerConnectionRef.current.signalingState);
 
-      // Create answer
+      // Create answer with proper m-line ordering
       console.log('🎯 DEBUG: Creating answer...');
       const answer = await peerConnectionRef.current.createAnswer();
       console.log('🎯 DEBUG: Answer created:', answer);
+      console.log('🔧 M-LINE FIX: Answer SDP for verification:', answer.sdp);
 
       // Set local description
       console.log('🎯 DEBUG: Setting local description (answer)...');
