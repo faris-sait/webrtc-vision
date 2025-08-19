@@ -997,14 +997,20 @@ const WebRTCDetectionApp = () => {
         await peerConnectionRef.current.setLocalDescription(offer);
         console.log('📱🎯 DEBUG: Local description set, signaling state:', peerConnectionRef.current.signalingState);
 
-        sendSignalingMessage({
+        const offerSent = sendSignalingMessage({
           type: 'offer',
           data: {
             sdp: offer.sdp,
             type: offer.type
           }
         });
-        console.log('📱🎯 DEBUG: Offer sent via signaling');
+        
+        if (offerSent) {
+          console.log('📱🎯 ✅ DEBUG: Offer sent successfully via signaling');
+          console.log('📱🎯 🚀 WebRTC negotiation initiated - waiting for browser to respond');
+        } else {
+          console.error('📱🎯 ❌ DEBUG: Failed to send offer via signaling');
+        }
       } else {
         console.error('📱❌ ERROR: No peer connection available when trying to add tracks');
       }
