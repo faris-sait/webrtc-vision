@@ -641,6 +641,25 @@ const WebRTCDetectionApp = () => {
     }
   };
 
+  // Process queued ICE candidates after remote description is set
+  const processQueuedIceCandidates = async () => {
+    if (iceCandidateQueueRef.current.length === 0) return;
+    
+    console.log('🧊 PROCESSING QUEUE: Processing', iceCandidateQueueRef.current.length, 'queued ICE candidates');
+    
+    while (iceCandidateQueueRef.current.length > 0) {
+      const candidateData = iceCandidateQueueRef.current.shift();
+      try {
+        const candidate = new RTCIceCandidate(candidateData);
+        await peerConnectionRef.current.addIceCandidate(candidate);
+        console.log('🧊 QUEUE: Successfully processed queued ICE candidate');
+      } catch (error) {
+        console.error('❌ Error processing queued ICE candidate:', error);
+        setErrors(prev => [...prev, { timestamp: Date.now(), error: `Failed to process queued ICE candidate: ${error.message}` }]);
+      }
+    }
+  };
+
   // Initialize frame queue
   const initializeFrameQueue = () => {
     if (!frameQueueRef.current) {
