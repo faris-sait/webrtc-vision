@@ -317,6 +317,15 @@ const WebRTCDetectionApp = () => {
     if (connected) {
       signalingRef.current = httpSignaling;
       console.log('✅ HTTP signaling fallback connected successfully');
+      
+      // Retry pending offer if available
+      if (window.pendingOffer) {
+        console.log('🔄 Retrying pending WebRTC offer via HTTP signaling...');
+        if (httpSignaling.send(window.pendingOffer)) {
+          console.log('✅ Pending offer sent successfully via HTTP signaling');
+          delete window.pendingOffer;
+        }
+      }
     } else {
       console.error('❌ HTTP signaling fallback failed');
       setConnectionStatus('error');
