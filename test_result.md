@@ -181,7 +181,7 @@
     implemented: true
     working: false
     file: "App.js"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
     needs_retesting: false
     status_history:
@@ -203,6 +203,12 @@
         - working: false
           agent: "testing"
           comment: "🎯 CRITICAL TIMING ISSUE IDENTIFIED - WEBRTC OFFER CREATED BUT NOT DELIVERED: Comprehensive testing reveals camera access fixes are working perfectly, but a critical timing issue prevents WebRTC negotiation: (1) ✅ AUTO-START CAMERA: Working perfectly - triggers automatically when phone interface loads with 1-second delay; (2) ✅ MOCK VIDEO STREAM: Working flawlessly - creates 640x480 canvas stream with moving animation, video element shows active stream; (3) ✅ PEER CONNECTION SETUP: Working correctly - RTCPeerConnection created, tracks added successfully, multiple senders confirmed; (4) ✅ WEBRTC OFFER CREATION: Working perfectly - SDP offers generated successfully with proper video track information; (5) ❌ CRITICAL TIMING ISSUE: Offers are created BEFORE signaling connection is established - auto-start runs at 1 second, but HTTP signaling fallback takes 3-5 seconds to connect; (6) ❌ OFFER DELIVERY FAILURE: Offers fail to send with 'No signaling connection available' error, and no retry mechanism exists; (7) ✅ MANUAL RESTART WORKS: When camera is manually restarted after signaling connects, offers are sent successfully and WebRTC negotiation initiates; (8) 📊 BROWSER SIDE: Shows 'Waiting for phone connection' and receives no offers because they were created before signaling was ready. ROOT CAUSE: Race condition between auto-start camera (1s) and signaling connection establishment (3-5s). SOLUTION NEEDED: Delay auto-start camera until after signaling connection is established, or implement offer retry mechanism when signaling becomes available."
+        - working: false
+          agent: "main"
+          comment: "TIMING RACE CONDITION FIXES IMPLEMENTED: Applied comprehensive solution to resolve the timing issue between camera auto-start and signaling connection: (1) SIGNALING-BASED AUTO-START: Removed fixed 1-second timeout, camera now auto-starts only when connectionStatus='connected' and mode='phone'; (2) PROPER SEQUENCING: Modified useEffect to monitor connectionStatus and trigger startLocalCamera when signaling is established; (3) OFFER RETRY MECHANISM: Added pendingOffer storage when initial offer fails to send, with retry when signaling becomes available; (4) DUAL RETRY SUPPORT: Retry mechanism works for both WebSocket and HTTP signaling fallback connections; (5) ENHANCED LOGGING: Added detailed timing fix debug logs with 📱🎯 TIMING FIX prefixes; (6) PREVENTION OF DUPLICATE STARTS: Added check for existing localStreamRef.current to prevent multiple camera starts. This ensures camera starts only after signaling is ready, and any failed offers are automatically retried when connection is available. Ready for testing complete WebRTC flow."
+        - working: false
+          agent: "testing"
+          comment: "❌ CRITICAL URL PARAMETER ROUTING ISSUE BLOCKS TIMING FIX TESTING: Comprehensive testing reveals a fundamental routing problem preventing phone interface access: (1) ❌ URL PARAMETER LOSS: Phone interface URLs with ?room=TIMING123&mode=phone are stripped during navigation - parameters become null; (2) ❌ PHONE INTERFACE NEVER LOADS: All phone URLs redirect to home page, preventing timing fix testing; (3) ✅ BROWSER INTERFACE WORKING: Browser detection studio loads correctly, shows 'Waiting for phone connection', generates QR codes with proper URLs; (4) ❌ WEBRTC FLOW BLOCKED: Cannot test timing fixes because phone interface is inaccessible via URL parameters; (5) 🔍 ROOT CAUSE: React routing or URL parameter handling is stripping query parameters during navigation, preventing mode='phone' detection; (6) 📊 IMPACT: All timing fix implementations (signaling-based auto-start, offer retry mechanism, enhanced logging) cannot be tested due to routing issue. CRITICAL BLOCKER: Fix URL parameter handling in React router to enable phone interface access before timing fixes can be validated."
           
   - task: "Real-time Canvas Overlay Detection"
     implemented: true
