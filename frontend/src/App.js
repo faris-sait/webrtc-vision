@@ -1108,13 +1108,14 @@ const WebRTCDetectionApp = () => {
   const handleUrlParameters = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlRoomId = urlParams.get('room');
-    const mode = urlParams.get('mode');
+    const urlMode = urlParams.get('mode');
     
-    console.log('🔗 Processing URL parameters:', { urlRoomId, mode, currentUrl: window.location.href });
+    console.log('🔗 Processing URL parameters:', { urlRoomId, urlMode, currentUrl: window.location.href });
 
     if (urlRoomId) {
       setRoomId(urlRoomId);
-      if (mode === 'phone') {
+      setMode(urlMode || '');
+      if (urlMode === 'phone') {
         setCurrentView('phone');
         // Note: Camera will auto-start when signaling connection is established
         console.log('📱 Phone interface loaded - will auto-start camera when signaling is ready');
