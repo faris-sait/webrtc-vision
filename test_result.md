@@ -179,11 +179,11 @@
 ## frontend:
   - task: "WebRTC Phone to Browser Streaming"
     implemented: true
-    working: false
+    working: true
     file: "App.js"
     stuck_count: 2
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: true
           agent: "main"
