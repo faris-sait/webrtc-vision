@@ -422,6 +422,10 @@ const WebRTCDetectionApp = () => {
 
   // WebRTC setup
   const setupPeerConnection = () => {
+    // Clear any queued ICE candidates when creating new connection
+    iceCandidateQueueRef.current = [];
+    console.log('🧊 SETUP: Cleared ICE candidate queue for new peer connection');
+    
     const peerConnection = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
