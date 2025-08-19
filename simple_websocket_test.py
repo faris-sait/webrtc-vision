@@ -61,7 +61,7 @@ async def test_error_details():
             }
             
             async with session.post(
-                "https://streamlink-2.preview.emergentagent.com/api/detect",
+                "https://webrtc-answer-fix.preview.emergentagent.com/api/detect",
                 json=invalid_request,
                 headers={"Content-Type": "application/json"}
             ) as response:
