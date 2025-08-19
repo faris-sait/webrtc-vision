@@ -1054,7 +1054,7 @@ const WebRTCDetectionApp = () => {
         setCurrentView('browser');
       }
     }
-  }, []);
+  }, [startLocalCamera]);
 
   // Connect when room ID changes
   useEffect(() => {
