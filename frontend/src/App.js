@@ -163,7 +163,7 @@ const WebRTCDetectionApp = () => {
     return newRoomId;
   };
 
-  const qrCodeUrl = roomId ? `${BACKEND_URL}?room=${roomId}&mode=phone` : '';
+  const qrCodeUrl = roomId ? `${window.location.origin}?room=${roomId}&mode=phone` : '';
 
   // Message handling for both WebSocket and HTTP signaling
   const handleSignalingMessage = async (message) => {
