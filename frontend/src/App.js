@@ -1104,10 +1104,12 @@ const WebRTCDetectionApp = () => {
   }, [isRecording]);
 
   // URL parameter handling for phone interface
-  useEffect(() => {
+  const handleUrlParameters = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlRoomId = urlParams.get('room');
     const mode = urlParams.get('mode');
+    
+    console.log('🔗 Processing URL parameters:', { urlRoomId, mode, currentUrl: window.location.href });
 
     if (urlRoomId) {
       setRoomId(urlRoomId);
@@ -1120,6 +1122,23 @@ const WebRTCDetectionApp = () => {
       }
     }
   }, []);
+
+  useEffect(() => {
+    // Process URL parameters on initial load
+    handleUrlParameters();
+    
+    // Listen for browser navigation changes (back/forward buttons)
+    const handlePopState = () => {
+      console.log('🔄 Pop state detected, re-processing URL parameters');
+      handleUrlParameters();
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [handleUrlParameters]);
 
   // Connect when room ID changes
   useEffect(() => {
