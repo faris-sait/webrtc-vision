@@ -1110,18 +1110,29 @@ const WebRTCDetectionApp = () => {
     const urlRoomId = urlParams.get('room');
     const urlMode = urlParams.get('mode');
     
-    console.log('🔗 Processing URL parameters:', { urlRoomId, urlMode, currentUrl: window.location.href });
+    console.log('🔗 Processing URL parameters:', { 
+      urlRoomId, 
+      urlMode, 
+      currentUrl: window.location.href,
+      searchParams: window.location.search 
+    });
 
     if (urlRoomId) {
       setRoomId(urlRoomId);
       setMode(urlMode || '');
+      console.log('📱 Setting room ID:', urlRoomId, 'and mode:', urlMode);
+      
       if (urlMode === 'phone') {
+        console.log('📱 URL MODE IS PHONE - setting currentView to phone');
         setCurrentView('phone');
         // Note: Camera will auto-start when signaling connection is established
         console.log('📱 Phone interface loaded - will auto-start camera when signaling is ready');
       } else {
+        console.log('📱 URL MODE IS NOT PHONE - setting currentView to browser, urlMode:', urlMode);
         setCurrentView('browser');
       }
+    } else {
+      console.log('🔗 No room ID in URL, staying on home page');
     }
   }, []);
 
