@@ -252,6 +252,15 @@ const WebRTCDetectionApp = () => {
         
         // Request room users
         wsWrapper.send({ type: 'get_room_users' });
+        
+        // Retry pending offer if available
+        if (window.pendingOffer) {
+          console.log('🔄 Retrying pending WebRTC offer via WebSocket...');
+          if (wsWrapper.send(window.pendingOffer)) {
+            console.log('✅ Pending offer sent successfully');
+            delete window.pendingOffer;
+          }
+        }
       };
 
       ws.onmessage = async (event) => {
