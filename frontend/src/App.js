@@ -1003,38 +1003,37 @@ const WebRTCDetectionApp = () => {
     try {
       console.log('📱🎯 Starting camera access...');
       
-      let stream;
-      try {
-        // First try to get real camera
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: { ideal: 30 }
-          },
-          audio: false
-        });
-        console.log('📱✅ Real camera access successful');
-      } catch (cameraError) {
-        console.warn('📱⚠️ Camera access failed:', cameraError.name, cameraError.message);
-        console.log('📱🎬 Falling back to mock video stream for testing...');
-        
-        try {
-          // Create mock video stream for testing
-          stream = createMockVideoStream();
-          console.log('📱✅ Mock video stream created successfully as fallback');
-          
-          // Add user feedback about mock stream
-          setErrors(prev => [...prev, { 
-            timestamp: Date.now(), 
-            error: 'Using mock video stream - real camera not available in testing environment' 
-          }]);
-        } catch (mockError) {
-          console.error('📱❌ CRITICAL: Mock video stream creation failed:', mockError);
-          throw new Error(`Both real camera and mock stream failed: ${cameraError.message} | ${mockError.message}`);
-        }
+      // 🔧 SDP M-LINE ORDER FIX: Prevent duplicate track addition
+      if (localStreamRef.current) {
+        console.log('📱🔧 M-LINE FIX: Camera already active, skipping duplicate start');
+        return;
       }
 
+      let stream;
+      
+      try {
+        // Try to get real camera first
+        console.log('📱 Attempting to access camera...');
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { width: 640, height: 480 },
+          audio: false  // Only video for object detection
+        });
+        console.log('📱✅ Real camera accessed successfully');
+      } catch (cameraError) {
+        console.warn('📱⚠️ Real camera access failed, using mock stream:', cameraError.message);
+        
+        // Use mock video stream as fallback
+        stream = createMockVideoStream();
+        console.log('📱✅ Mock camera stream created as fallback');
+        
+        // Show user feedback about using mock stream
+        setErrors(prev => [...prev, { 
+          timestamp: Date.now(), 
+          error: `Using test video stream (camera not available: ${cameraError.message})` 
+        }]);
+      }
+
+      console.log('📱 Setting up video preview...');
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
         console.log('📱 Local video element srcObject set');
@@ -1043,14 +1042,34 @@ const WebRTCDetectionApp = () => {
       localStreamRef.current = stream;
       console.log('📱 Stream saved to ref');
 
-      // Add stream to peer connection
-      if (peerConnectionRef.current) {
-        console.log('📱🎯 DEBUG: Starting WebRTC offer creation process');
-        console.log('📱🎯 DEBUG: Peer connection state:', peerConnectionRef.current.connectionState);
-        console.log('📱🎯 DEBUG: Signaling state:', peerConnectionRef.current.signalingState);
-        console.log('📱 DEBUG: Adding tracks to peer connection');
-        console.log('📱 DEBUG: Stream tracks:', stream.getTracks());
+      // 🔧 SDP M-LINE ORDER FIX: Ensure consistent peer connection setup
+      if (!peerConnectionRef.current) {
+        console.log('📱🔧 M-LINE FIX: Creating new peer connection for offer');
+        peerConnectionRef.current = setupPeerConnection();
+      }
+
+      // 🔧 SDP M-LINE ORDER FIX: Clear existing tracks and add consistent transceivers
+      console.log('📱🔧 M-LINE FIX: Setting up consistent transceiver configuration...');
+      
+      // Check existing transceivers
+      const existingTransceivers = peerConnectionRef.current.getTransceivers();
+      console.log('📱🔧 M-LINE FIX: Existing transceivers:', existingTransceivers.length);
+      
+      if (existingTransceivers.length > 0) {
+        // If transceivers exist, replace tracks instead of adding new ones
+        console.log('📱🔧 M-LINE FIX: Replacing tracks in existing transceivers');
+        const videoTrack = stream.getVideoTracks()[0];
         
+        for (const transceiver of existingTransceivers) {
+          if (transceiver.sender && transceiver.sender.track?.kind === 'video') {
+            await transceiver.sender.replaceTrack(videoTrack);
+            console.log('📱🔧 M-LINE FIX: Replaced video track in existing transceiver');
+            break;
+          }
+        }
+      } else {
+        // No existing transceivers, add tracks normally
+        console.log('📱🔧 M-LINE FIX: Adding tracks to clean peer connection');
         stream.getTracks().forEach(track => {
           console.log('📱 DEBUG: Adding track:', {
             kind: track.kind,
@@ -1060,27 +1079,30 @@ const WebRTCDetectionApp = () => {
           });
           peerConnectionRef.current.addTrack(track, stream);
         });
-        console.log('📱 DEBUG: All tracks added to peer connection');
+      }
 
-        // Verify tracks were added
-        const senders = peerConnectionRef.current.getSenders();
-        console.log('📱🎯 DEBUG: Peer connection senders after addTrack:', senders);
-        senders.forEach((sender, index) => {
-          console.log(`📱🎯 DEBUG: Sender ${index}:`, {
-            track: sender.track,
-            trackKind: sender.track?.kind,
-            trackEnabled: sender.track?.enabled,
-            trackReadyState: sender.track?.readyState
-          });
+      console.log('📱 DEBUG: All tracks configured in peer connection');
+
+      // Verify tracks were configured
+      const senders = peerConnectionRef.current.getSenders();
+      console.log('📱🎯 DEBUG: Peer connection senders after track configuration:', senders);
+      senders.forEach((sender, index) => {
+        console.log(`📱🎯 DEBUG: Sender ${index}:`, {
+          track: sender.track,
+          trackKind: sender.track?.kind,
+          trackEnabled: sender.track?.enabled,
+          trackReadyState: sender.track?.readyState
         });
+      });
 
-        // Create and send offer
-        console.log('📱🎯 DEBUG: Creating offer...');
-        const offer = await peerConnectionRef.current.createOffer();
-        console.log('📱🎯 DEBUG: Offer created:', offer);
-        
-        await peerConnectionRef.current.setLocalDescription(offer);
-        console.log('📱🎯 DEBUG: Local description set, signaling state:', peerConnectionRef.current.signalingState);
+      // Create and send offer
+      console.log('📱🎯 DEBUG: Creating offer...');
+      const offer = await peerConnectionRef.current.createOffer();
+      console.log('📱🎯 DEBUG: Offer created:', offer);
+      console.log('📱🔧 M-LINE FIX: Offer SDP for verification:', offer.sdp);
+      
+      await peerConnectionRef.current.setLocalDescription(offer);
+      console.log('📱🎯 DEBUG: Local description set, signaling state:', peerConnectionRef.current.signalingState);
 
         const offerSent = sendSignalingMessage({
           type: 'offer',
