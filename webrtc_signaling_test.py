@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Test configuration - Using the correct backend URL from frontend/.env
-BACKEND_URL = "https://video-track-debug.preview.emergentagent.com"
+BACKEND_URL = "https://rtc-troubleshoot.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 class WebRTCSignalingTester:

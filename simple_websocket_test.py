@@ -61,7 +61,7 @@ async def test_error_details():
             }
             
             async with session.post(
-                "https://video-track-debug.preview.emergentagent.com/api/detect",
+                "https://rtc-troubleshoot.preview.emergentagent.com/api/detect",
                 json=invalid_request,
                 headers={"Content-Type": "application/json"}
             ) as response:
