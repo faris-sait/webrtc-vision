@@ -1301,8 +1301,9 @@ const WebRTCDetectionApp = () => {
       localStreamRef.current = null;
     }
     
-    // Close peer connection
+    // 🔧 SDP M-LINE ORDER FIX: Properly close and reset peer connection
     if (peerConnectionRef.current) {
+      console.log('🔧 M-LINE FIX: Closing and resetting peer connection');
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
