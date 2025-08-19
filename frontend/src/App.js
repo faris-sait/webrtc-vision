@@ -624,6 +624,13 @@ const WebRTCDetectionApp = () => {
       console.log('🧊 DEBUG: Peer connection state:', peerConnectionRef.current.connectionState);
       console.log('🧊 DEBUG: Signaling state:', peerConnectionRef.current.signalingState);
 
+      // Check if remote description is set
+      if (!peerConnectionRef.current.remoteDescription) {
+        console.log('🧊 QUEUING: Remote description not set yet, queuing ICE candidate');
+        iceCandidateQueueRef.current.push(message.data);
+        return;
+      }
+
       const candidate = new RTCIceCandidate(message.data);
       await peerConnectionRef.current.addIceCandidate(candidate);
       console.log('🧊 DEBUG: ICE candidate added successfully');
