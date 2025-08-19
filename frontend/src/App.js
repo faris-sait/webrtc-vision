@@ -1109,6 +1109,22 @@ const WebRTCDetectionApp = () => {
     };
   }, [roomId, connectSignaling]);
 
+  // Auto-start camera for phone interface when signaling is connected
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    
+    // Only auto-start for phone interface
+    if (mode === 'phone' && connectionStatus === 'connected' && roomId && !localStreamRef.current) {
+      console.log('📱🎯 TIMING FIX: Signaling connected, auto-starting camera now...');
+      
+      // Small delay to ensure peer connection is fully ready
+      setTimeout(() => {
+        startLocalCamera();
+      }, 500);
+    }
+  }, [connectionStatus, roomId, startLocalCamera]);
+
   const startSession = () => {
     if (!roomId) {
       generateRoomId();
