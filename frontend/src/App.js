@@ -981,7 +981,7 @@ const WebRTCDetectionApp = () => {
         error: `Critical camera error: ${error.message}` 
       }]);
     }
-  };
+  }, []);
 
   // Detection mode switching
   useEffect(() => {
