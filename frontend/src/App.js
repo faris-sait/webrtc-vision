@@ -886,7 +886,7 @@ const WebRTCDetectionApp = () => {
   };
 
   // Start local camera (for phone interface)
-  const startLocalCamera = async () => {
+  const startLocalCamera = useCallback(async () => {
     try {
       console.log('📱🎯 Starting camera access...');
       
