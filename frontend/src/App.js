@@ -1045,6 +1045,11 @@ const WebRTCDetectionApp = () => {
       setRoomId(urlRoomId);
       if (mode === 'phone') {
         setCurrentView('phone');
+        // Auto-start camera when phone interface loads
+        setTimeout(() => {
+          console.log('📱 Auto-starting camera for phone interface...');
+          startLocalCamera();
+        }, 1000); // Small delay to ensure peer connection is set up
       } else {
         setCurrentView('browser');
       }
