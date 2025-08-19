@@ -1104,32 +1104,29 @@ const WebRTCDetectionApp = () => {
       await peerConnectionRef.current.setLocalDescription(offer);
       console.log('📱🎯 DEBUG: Local description set, signaling state:', peerConnectionRef.current.signalingState);
 
-        const offerSent = sendSignalingMessage({
+      const offerSent = sendSignalingMessage({
+        type: 'offer',
+        data: {
+          sdp: offer.sdp,
+          type: offer.type
+        }
+      });
+      
+      if (offerSent) {
+        console.log('📱🎯 ✅ DEBUG: Offer sent successfully via signaling');
+        console.log('📱🎯 🚀 WebRTC negotiation initiated - waiting for browser to respond');
+      } else {
+        console.error('📱🎯 ❌ DEBUG: Failed to send offer via signaling - will retry when connection is available');
+        
+        // Store offer for retry when signaling becomes available
+        console.log('📱🎯 🔄 DEBUG: Storing offer for retry mechanism');
+        window.pendingOffer = {
           type: 'offer',
           data: {
             sdp: offer.sdp,
             type: offer.type
           }
-        });
-        
-        if (offerSent) {
-          console.log('📱🎯 ✅ DEBUG: Offer sent successfully via signaling');
-          console.log('📱🎯 🚀 WebRTC negotiation initiated - waiting for browser to respond');
-        } else {
-          console.error('📱🎯 ❌ DEBUG: Failed to send offer via signaling - will retry when connection is available');
-          
-          // Store offer for retry when signaling becomes available
-          console.log('📱🎯 🔄 DEBUG: Storing offer for retry mechanism');
-          window.pendingOffer = {
-            type: 'offer',
-            data: {
-              sdp: offer.sdp,
-              type: offer.type
-            }
-          };
-        }
-      } else {
-        console.error('📱❌ ERROR: No peer connection available when trying to add tracks');
+        };
       }
     } catch (error) {
       console.error('❌ Critical error in startLocalCamera:', error);
