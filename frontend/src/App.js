@@ -1009,7 +1009,17 @@ const WebRTCDetectionApp = () => {
           console.log('📱🎯 ✅ DEBUG: Offer sent successfully via signaling');
           console.log('📱🎯 🚀 WebRTC negotiation initiated - waiting for browser to respond');
         } else {
-          console.error('📱🎯 ❌ DEBUG: Failed to send offer via signaling');
+          console.error('📱🎯 ❌ DEBUG: Failed to send offer via signaling - will retry when connection is available');
+          
+          // Store offer for retry when signaling becomes available
+          console.log('📱🎯 🔄 DEBUG: Storing offer for retry mechanism');
+          window.pendingOffer = {
+            type: 'offer',
+            data: {
+              sdp: offer.sdp,
+              type: offer.type
+            }
+          };
         }
       } else {
         console.error('📱❌ ERROR: No peer connection available when trying to add tracks');
