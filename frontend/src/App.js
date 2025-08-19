@@ -1085,16 +1085,13 @@ const WebRTCDetectionApp = () => {
       setRoomId(urlRoomId);
       if (mode === 'phone') {
         setCurrentView('phone');
-        // Auto-start camera when phone interface loads
-        setTimeout(() => {
-          console.log('📱 Auto-starting camera for phone interface...');
-          startLocalCamera();
-        }, 1000); // Small delay to ensure peer connection is set up
+        // Note: Camera will auto-start when signaling connection is established
+        console.log('📱 Phone interface loaded - will auto-start camera when signaling is ready');
       } else {
         setCurrentView('browser');
       }
     }
-  }, [startLocalCamera]);
+  }, []);
 
   // Connect when room ID changes
   useEffect(() => {
